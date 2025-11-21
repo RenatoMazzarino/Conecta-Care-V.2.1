@@ -6,16 +6,22 @@ import { revalidatePath } from "next/cache";
 
 export async function upsertAddressAction(data: PatientAddressDTO) {
   const supabase = await createClient();
+
+  // 1. Validação Zod
   const parsed = PatientAddressSchema.safeParse(data);
-
-  if (!parsed.success) return { success: false, error: "Dados inválidos." };
+  if (!parsed.success) {
+    console.error("Erro validação address:", parsed.error);
+    return { success: false, error: "Dados inválidos. Verifique os campos obrigatórios." };
+  }
+  
   const form = parsed.data;
+  const patientId = form.patient_id;
 
-  // 1. Salvar Endereço Base
+  // 2. Upsert Endereço (Tabela 1)
   const { error: addrError } = await supabase
     .from('patient_addresses')
     .upsert({
-      patient_id: form.patient_id,
+      patient_id: patientId,
       street: form.street,
       number: form.number,
       complement: form.complement,
@@ -25,49 +31,71 @@ export async function upsertAddressAction(data: PatientAddressDTO) {
       zip_code: form.zip_code,
       reference_point: form.reference_point,
       zone_type: form.zone_type,
-      travel_notes: form.travel_notes
+      travel_notes: form.travel_notes,
+      // facade_image_url: form.facade_image_url, // Se tiver upload no futuro
     }, { onConflict: 'patient_id' });
 
-  if (addrError) return { success: false, error: "Erro endereço: " + addrError.message };
+  if (addrError) {
+    console.error("Erro ao salvar endereço:", addrError);
+    return { success: false, error: "Erro ao salvar endereço base." };
+  }
 
-  // 2. Salvar Domicílio
+  // 3. Upsert Domicílio (Tabela 2 - Infraestrutura)
   const { error: domError } = await supabase
     .from('patient_domiciles')
     .upsert({
-      patient_id: form.patient_id,
+      patient_id: patientId,
       ambulance_access: form.ambulance_access,
       team_parking: form.team_parking,
       night_access_risk: form.night_access_risk,
       entry_procedure: form.entry_procedure,
+      
       bed_type: form.bed_type,
       mattress_type: form.mattress_type,
       voltage: form.voltage,
+      backup_power_source: form.backup_power_source,
       has_wifi: form.has_wifi,
+      water_source: form.water_source,
+      
       has_smokers: form.has_smokers,
       pets_description: form.pets_description,
-      animals_behavior: form.animals_behavior
+      animals_behavior: form.animals_behavior,
+      general_observations: form.general_observations,
     }, { onConflict: 'patient_id' });
 
-  if (domError) return { success: false, error: "Erro domicílio: " + domError.message };
-
-  // 3. Salvar Membros (Estratégia simples: Delete All + Insert All para este paciente)
-  // Para edição granular, precisaríamos de lógica de diff, mas para V2 isso resolve.
-  if (form.household_members) {
-     await supabase.from('patient_household_members').delete().eq('patient_id', form.patient_id);
-     
-     const membersToInsert = form.household_members.map(m => ({
-         patient_id: form.patient_id,
-         name: m.name,
-         role: m.role,
-         type: m.type,
-         schedule_note: m.schedule_note
-     }));
-     
-     if (membersToInsert.length > 0) {
-        await supabase.from('patient_household_members').insert(membersToInsert);
-     }
+  if (domError) {
+    console.error("Erro ao salvar domicílio:", domError);
+    return { success: false, error: "Erro ao salvar dados de domicílio." };
   }
 
-  revalidatePath(`/patients/${form.patient_id}`);
+  // 4. Atualizar Membros da Casa (Tabela 3 - Lista)
+  // Estratégia: Se o array vier preenchido, substituímos a lista antiga.
+  if (form.household_members) {
+    // Remove antigos
+    await supabase.from('patient_household_members').delete().eq('patient_id', patientId);
+    
+    // Insere novos (se houver)
+    if (form.household_members.length > 0) {
+        const membersToInsert = form.household_members.map(m => ({
+            patient_id: patientId,
+            name: m.name,
+            role: m.role,
+            type: m.type,
+            schedule_note: m.schedule_note
+        }));
+        
+        const { error: memberError } = await supabase
+            .from('patient_household_members')
+            .insert(membersToInsert);
+            
+        if (memberError) {
+            console.error("Erro ao salvar membros:", memberError);
+            return { success: false, error: "Erro ao salvar familiares." };
+        }
+    }
+  }
+
+  // 5. Sucesso
+  revalidatePath(`/patients/${patientId}`);
   return { success: true };
 }

@@ -1,4 +1,4 @@
-import { getPatients } from "@/modules/patients/data";
+import { getPatients } from "@/modules/patients/patient.data";
 import { PatientList } from "@/modules/patients/components/PatientList";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";

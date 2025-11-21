@@ -58,9 +58,11 @@ export function PatientList({ data }: PatientListProps) {
                   : '--'}
               </TableCell>
               <TableCell>
-                <Badge variant={patient.record_status === 'active' ? 'default' : 'secondary'}
-                       className={patient.record_status === 'active' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}>
-                  {patient.record_status === 'active' ? 'Ativo' : 'Inativo'}
+                <Badge
+                  variant={patient.status === 'active' ? 'default' : 'secondary'}
+                  className={patient.status === 'active' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                >
+                  {patient.status === 'active' ? 'Ativo' : 'Inativo'}
                 </Badge>
               </TableCell>
               <TableCell className="text-right">

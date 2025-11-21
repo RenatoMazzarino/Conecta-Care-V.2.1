@@ -1,10 +1,10 @@
 'use client'
 
-import { useForm } from "react-hook-form";
+import { Resolver, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PatientPersonalSchema, PatientPersonalDTO } from "@/data/definitions/personal";
-import { upsertPersonalAction } from "../actions.upsertPersonal";
-import { FullPatientDetails } from "../patient.data";
+import { upsertPersonalAction } from "@/modules/patients/actions";
+import { FullPatientDetails } from "@/modules/patients/patient.data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,7 +25,8 @@ function SectionHeader({ icon: Icon, title }: { icon: any, title: string }) {
 
 export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
     const form = useForm<PatientPersonalDTO>({
-        resolver: zodResolver(PatientPersonalSchema),
+        // Cast necessário para alinhar os tipos de Resolver e evitar conflito de duplicação
+        resolver: zodResolver(PatientPersonalSchema) as Resolver<PatientPersonalDTO>,
         defaultValues: {
             patient_id: patient?.id,
             full_name: patient?.full_name ?? '',

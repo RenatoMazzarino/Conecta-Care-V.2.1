@@ -49,7 +49,7 @@ export async function getScheduleGrid(startDate: Date, daysToRender: number = 7)
     .from('shifts')
     .select(`
       *,
-      professional:professional_profiles(full_name, role, user_id)
+      professional:professionals(full_name, role, user_id)
     `)
     .gte('start_time', startISO)
     .lt('start_time', endISO);
@@ -162,7 +162,7 @@ export async function getShiftDetails(shiftId: string): Promise<ShiftMonitorData
     .select(`
       *,
       patient:patients(full_name),
-      professional:professional_profiles(full_name, role, user_id),
+      professional:professionals(full_name, role, user_id),
       timeline:shift_timeline_events(*),
       notes:shift_internal_notes(*)
     `)

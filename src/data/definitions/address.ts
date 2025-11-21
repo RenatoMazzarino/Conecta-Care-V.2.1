@@ -32,10 +32,13 @@ export const PatientAddressSchema = z.object({
   bed_type: z.string().optional(),
   mattress_type: z.string().optional(),
   voltage: z.string().optional(),
+  backup_power_source: z.string().optional(),
+  water_source: z.string().optional(),
   has_wifi: z.boolean().default(false),
   has_smokers: z.boolean().default(false),
   pets_description: z.string().optional(),
   animals_behavior: z.string().optional(),
+  general_observations: z.string().optional(),
   
   // Membros (Array para gerenciar a sub-tabela)
   household_members: z.array(HouseholdMemberSchema).optional(),
