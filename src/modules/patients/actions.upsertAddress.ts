@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PatientAddressSchema, PatientAddressDTO } from "@/data/definitions/address";
 import { revalidatePath } from "next/cache";
+import { logSystemAction } from "../admin/audit.service";
 
 export async function upsertAddressAction(data: PatientAddressDTO) {
   const supabase = await createClient();
@@ -96,6 +97,18 @@ export async function upsertAddressAction(data: PatientAddressDTO) {
   }
 
   // 5. Sucesso
+  try {
+    await logSystemAction({
+      action: "UPDATE",
+      entity: "patient_addresses",
+      entityId: patientId,
+      changes: { payload: { old: null, new: form } },
+      reason: "Atualização via Portal Administrativo",
+    });
+  } catch (logErr) {
+    console.error("Erro ao auditar endereço:", logErr);
+  }
+
   revalidatePath(`/patients/${patientId}`);
   return { success: true };
 }

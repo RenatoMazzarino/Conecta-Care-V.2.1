@@ -11,15 +11,13 @@ import {
 import { TabFinancial } from '@/modules/patients/components/tabs/TabFinancial';
 import { TabPersonal } from '@/modules/patients/components/tabs/TabPersonal';
 import { TabAddress } from '@/modules/patients/components/tabs/TabAddress';
-import { 
-  TabGeneral, 
-  TabTeam, 
-  TabInventory, 
-  TabAdministrative, 
-  TabDocuments, 
-  TabHistory 
-} from '@/modules/patients/components/tabs/TabPlaceholders';
+import { TabGeneral } from '@/modules/patients/components/tabs/TabGeneral';
 import { TabClinical } from '@/modules/patients/components/tabs/TabClinical';
+import { TabTeam } from '@/modules/patients/components/tabs/TabTeam';
+import { TabInventory } from '@/modules/patients/components/tabs/TabInventory';
+import { TabAdministrative } from '@/modules/patients/components/tabs/TabAdministrative';
+import { TabDocuments } from '@/modules/patients/components/tabs/TabDocuments';
+import { TabHistory } from '@/modules/patients/components/tabs/TabHistory';
 
 export const dynamic = 'force-dynamic';
 
@@ -83,7 +81,7 @@ export default async function PatientDetailsPage({ params }: PatientDetailsPageP
                             <TabTriggerItem value="inventory" label="Estoque" icon={Package} />
                             <TabTriggerItem value="administrative" label="Administrativo" icon={Briefcase} />
                             <TabTriggerItem value="financial" label="Financeiro" icon={CurrencyDollar} />
-                            <TabTriggerItem value="documents" label="Documentos" icon={Files} count={0} />
+                            <TabTriggerItem value="documents" label="Documentos" icon={Files} count={patient.documents?.length ?? 0} />
                             <TabTriggerItem value="history" label="Histórico" icon={ClockCounterClockwise} />
                         </TabsList>
                     </div>
@@ -92,12 +90,12 @@ export default async function PatientDetailsPage({ params }: PatientDetailsPageP
                     <TabsContent value="personal"><TabPersonal patient={patient} /></TabsContent>
                     <TabsContent value="address"><TabAddress patient={patient} /></TabsContent>
                     <TabsContent value="clinical"><TabClinical patient={patient} /></TabsContent>
-                    <TabsContent value="team"><TabTeam /></TabsContent>
-                    <TabsContent value="inventory"><TabInventory /></TabsContent>
-                    <TabsContent value="administrative"><TabAdministrative /></TabsContent>
-                    <TabsContent value="financial"><TabFinancial patientId={patient.id} /></TabsContent>
-                    <TabsContent value="documents"><TabDocuments /></TabsContent>
-                    <TabsContent value="history"><TabHistory /></TabsContent>
+                    <TabsContent value="team"><TabTeam patient={patient} /></TabsContent>
+                    <TabsContent value="inventory"><TabInventory patient={patient} /></TabsContent>
+                    <TabsContent value="administrative"><TabAdministrative patient={patient} /></TabsContent>
+                    <TabsContent value="financial"><TabFinancial patient={patient} /></TabsContent>
+                    <TabsContent value="documents"><TabDocuments patient={patient} /></TabsContent>
+                    <TabsContent value="history"><TabHistory patient={patient} /></TabsContent>
                 </Tabs>
             </div>
         </div>

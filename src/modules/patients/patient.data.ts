@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { FinancialRecordDTO } from "@/data/definitions/financial";
 
 // --- DEFINIÇÕES DE TIPOS (Para evitar 'any' nos componentes) ---
 
@@ -45,10 +46,15 @@ export type FullPatientDetails = {
   id: string;
   full_name: string;
   social_name?: string | null;
+  salutation?: string | null;
+  pronouns?: string | null;
   cpf?: string | null;
+  cpf_status?: string | null;
   rg?: string | null;
   rg_issuer?: string | null;
   cns?: string | null;
+  national_id?: string | null;
+  document_validation_method?: string | null;
   date_of_birth?: string | null;
   gender?: "M" | "F" | "Other" | null;
   gender_identity?: string | null;
@@ -56,6 +62,15 @@ export type FullPatientDetails = {
   civil_status?: string | null;
   nationality?: string | null;
   place_of_birth?: string | null;
+  preferred_language?: string | null;
+  photo_consent?: boolean | null;
+  mobile_phone?: string | null;
+  secondary_phone?: string | null;
+  email?: string | null;
+  pref_contact_method?: string | null;
+  accept_sms?: boolean | null;
+  accept_email?: boolean | null;
+  block_marketing?: boolean | null;
   status?: string | null; // CORRIGIDO: de record_status para status
   created_at?: string | null;
   
@@ -64,9 +79,14 @@ export type FullPatientDetails = {
   address?: PatientAddressRecord[];
   domicile?: PatientDomicileRecord[];
   household?: PatientHouseholdMember[];
-  financial?: any[]; // Tiparemos melhor depois se precisar
+  financial_profile?: any[];
   clinical?: any[];
   contacts?: any[];
+  team?: any[];
+  ledger?: FinancialRecordDTO[];
+  administrative?: any[];
+  inventory?: any[];
+  documents?: any[];
   medications?: any[];
 };
 
@@ -112,9 +132,11 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
       address:patient_addresses(*),
       domicile:patient_domiciles(*),
       household:patient_household_members(*),
-      financial:patient_financial_profiles(*),
-      clinical:patient_clinical_profiles(*)
-      ,
+      financial_profile:patient_financial_profiles(*),
+      ledger:financial_records(*),
+      clinical:patient_clinical_profiles(*),
+      administrative:patient_administrative_profiles(*),
+      documents:patient_documents(*),
       medications:patient_medications(*)
     `)
     .eq("id", patientId)
@@ -125,5 +147,35 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
     return null;
   }
 
-  return data as FullPatientDetails;
+  // Busca contatos e equipe separadamente para evitar dependência de FK no select aninhado
+  const [{ data: contacts }, { data: team }, { data: inventoryRows }] = await Promise.all([
+    supabase.from("patient_emergency_contacts").select("*").eq("patient_id", patientId),
+    supabase
+      .from("care_team_members")
+      .select(`
+        id,
+        role,
+        is_primary,
+        active,
+        professional:professional_profiles(full_name, contact_phone)
+      `)
+      .eq("patient_id", patientId),
+    supabase.from("patient_inventory").select("*").eq("patient_id", patientId),
+  ]);
+
+  // Enriquecemos o inventário com dados do item mestre manualmente (evita dependência de FK configurada)
+  let inventory = inventoryRows ?? [];
+  const itemIds = Array.from(new Set(inventory.map((row: any) => row.item_id).filter(Boolean)));
+
+  if (itemIds.length > 0) {
+    const { data: masterItems } = await supabase
+      .from("inventory_items")
+      .select("id, name, category, is_trackable, brand")
+      .in("id", itemIds);
+
+    const map = new Map((masterItems ?? []).map((m) => [m.id, m]));
+    inventory = inventory.map((row: any) => ({ ...row, item: map.get(row.item_id) || null }));
+  }
+
+  return { ...data, contacts: contacts ?? [], team: team ?? [], inventory } as FullPatientDetails;
 }
