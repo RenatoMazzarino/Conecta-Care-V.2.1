@@ -28,6 +28,8 @@ import {
   type ScheduleSlot,
   type ScheduleRow,
 } from '../utils';
+import { toast } from "sonner";
+import { NewShiftDialog } from "./NewShiftDialog";
 
 type VacancyContext = {
   shiftId: string;
@@ -45,14 +47,17 @@ function CommandBarButton({
   icon: Icon,
   label,
   accent,
+  onClick,
 }: {
   icon: React.ComponentType<IconProps>;
   label: string;
   accent?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <button
       type="button"
+      onClick={onClick}
       className={cn(
         'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-slate-600 transition',
         'hover:bg-slate-100 hover:text-[#0F2B45]',
@@ -81,6 +86,19 @@ function renderSlotCard(
   patientId: string,
   onClick: (slot: ScheduleSlot, patientName: string, patientId: string, day: WeekDay) => void,
 ) {
+  // Slot livre: mostra container vazio/call-to-action
+  if (slot.status === 'free') {
+    return (
+      <div
+        onClick={() => onClick(slot, patientName, patientId, day)}
+        className="group flex h-full min-h-[80px] cursor-pointer flex-col items-center justify-center rounded border border-dashed border-slate-200 bg-slate-50/30 transition hover:border-slate-300 hover:bg-slate-50"
+        title="Clique para agendar"
+      >
+        <div className="hidden text-xs font-bold text-slate-400 group-hover:block">+ Agendar</div>
+      </div>
+    );
+  }
+
   const baseIcon = slot.shiftType === 'day' ? Sun : Moon;
   const professionalName = slot.professional?.name ?? 'Folguista';
   const showAction = ['live', 'warning', 'open', 'open-candidates', 'critical'].includes(slot.status);
@@ -187,21 +205,36 @@ export function ScheduleDashboard() {
   }
 
   async function handleSlotClick(slot: ScheduleSlot, patientName: string, patientId: string, day: WeekDay) {
+    // Espaço livre: apenas informa por enquanto
+    if (slot.status === 'free') {
+      toast.info(`Agendar plantão para ${patientName} em ${day.dateLabel}? Em breve.`);
+      return;
+    }
+
+    // Proteção: ignora slots virtuais (IDs maiores que UUID)
+    if (slot.id.length > 36) {
+      toast.info("Este horário está livre. Utilize 'Nova Vaga' para alocar.");
+      return;
+    }
+
     if (['live', 'planned', 'warning', 'completed'].includes(slot.status)) {
-      // Open sheet optimistically and clear previous data
       setIsMonitorOpen(true);
       setMonitorData(undefined);
 
-      // Fetch real details from the server
       try {
         const details = await getShiftDetails(slot.id);
+
         if (details) {
           setMonitorData(details);
+        } else {
+          toast.error("Detalhes não encontrados.");
+          setIsMonitorOpen(false);
         }
-      } catch (err) {
-        console.error('Erro ao carregar detalhes do plantão', err);
+      } catch (error) {
+        console.error("Erro ao carregar plantão", error);
+        toast.error("Erro de conexão.");
+        setIsMonitorOpen(false);
       }
-
     } else if (['open', 'open-candidates', 'critical'].includes(slot.status)) {
       setVacancyContext({
         shiftId: slot.id,
@@ -260,7 +293,8 @@ export function ScheduleDashboard() {
 
       <section className="sticky top-4 z-20 rounded-lg border border-slate-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur flex justify-between">
         <div className="flex gap-2">
-          <CommandBarButton icon={Plus} label="Nova Vaga" accent />
+          {/* Botão real de agendamento */}
+          <NewShiftDialog />
           <div className="h-5 w-px bg-slate-200 mx-2" />
           <CommandBarButton icon={Users} label="Filtrar" />
           <CommandBarButton icon={Funnel} label="Avançado" />
@@ -337,3 +371,6 @@ export function ScheduleDashboard() {
     </div>
   );
 }
+  function handleNewVacancy() {
+    toast.info("Use um slot aberto na grade para criar uma vaga. Fluxo dedicado de criação em breve.");
+  }

@@ -23,7 +23,7 @@ export async function createPatientAction(data: CreatePatientDTO) {
       cpf: form.cpf,
       date_of_birth: form.date_of_birth.toISOString(),
       gender: form.gender,
-      record_status: "active",
+      status: "active",
     })
     .select("id")
     .single();

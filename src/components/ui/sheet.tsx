@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import * as SheetPrimitive from "@radix-ui/react-dialog"
-import { XIcon } from "lucide-react"
+import { X } from "@phosphor-icons/react"
 
 import { cn } from "@/lib/utils"
 
@@ -48,15 +48,18 @@ function SheetContent({
   className,
   children,
   side = "right",
+  ariaLabel,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
-  side?: "top" | "right" | "bottom" | "left"
+  side?: "top" | "right" | "bottom" | "left";
+  ariaLabel?: string;
 }) {
   return (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content
         data-slot="sheet-content"
+        aria-label={ariaLabel || "Panel"}
         className={cn(
           "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
           side === "right" &&
@@ -71,9 +74,12 @@ function SheetContent({
         )}
         {...props}
       >
+        {/* Hidden title to satisfy accessibility requirement even quando não for passado */}
+        <SheetPrimitive.Title className="sr-only">Panel</SheetPrimitive.Title>
+        <SheetPrimitive.Description className="sr-only">Panel content</SheetPrimitive.Description>
         {children}
         <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
-          <XIcon className="size-4" />
+          <X className="size-4" />
           <span className="sr-only">Close</span>
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>

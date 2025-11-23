@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { ReactNode } from "react";
-import { CalendarCheck, ChartPieSlice, CurrencyCircleDollar, Package, UsersThree } from "@phosphor-icons/react/dist/ssr";
+import { CalendarCheck, ChartPieSlice, CurrencyCircleDollar, Package, UsersThree, UserGear } from "@phosphor-icons/react/dist/ssr";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: ChartPieSlice },
   { href: "/patients", label: "Pacientes", icon: UsersThree },
+  { href: "/team", label: "Equipe", icon: UserGear },
   { href: "/schedule", label: "Escala", icon: CalendarCheck },
   { href: "/financial", label: "Financeiro", icon: CurrencyCircleDollar },
   { href: "/inventory", label: "Estoque", icon: Package },

@@ -265,7 +265,7 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center space-x-2 space-y-0">
                   <FormControl>
-                    <Checkbox checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+                    <Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} />
                   </FormControl>
                   <FormLabel className="text-xs font-normal text-slate-600">
                     Consentimento para uso de foto no prontuário e crachá.
@@ -421,7 +421,7 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
                   render={({ field }) => (
                     <FormItem className="flex items-center space-x-2 space-y-0">
                       <FormControl>
-                        <Checkbox checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+                        <Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} />
                       </FormControl>
                       <FormLabel>Aceita SMS</FormLabel>
                     </FormItem>
@@ -433,7 +433,7 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
                   render={({ field }) => (
                     <FormItem className="flex items-center space-x-2 space-y-0">
                       <FormControl>
-                        <Checkbox checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+                        <Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} />
                       </FormControl>
                       <FormLabel>Aceita Email</FormLabel>
                     </FormItem>
@@ -447,7 +447,7 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
                       <FormControl>
                         <Checkbox
                           checked={field.value}
-                          onChange={(e) => field.onChange(e.target.checked)}
+                          onCheckedChange={(val) => field.onChange(!!val)}
                           className="data-[state=checked]:border-red-500 data-[state=checked]:bg-red-500"
                         />
                       </FormControl>

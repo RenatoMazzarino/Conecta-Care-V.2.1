@@ -222,14 +222,24 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                         <div className="md:col-span-12 flex gap-4 flex-wrap">
                             <FormField control={form.control} name="has_wifi" render={({ field }) => (
                                 <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 bg-slate-50">
-                                    <FormControl><Checkbox checked={field.value} onChange={(e) => field.onChange(e.target.checked)} /></FormControl>
+                                    <FormControl>
+                                        <Checkbox
+                                            checked={!!field.value}
+                                            onCheckedChange={(val) => field.onChange(!!val)}
+                                        />
+                                    </FormControl>
                                     <FormLabel className="flex items-center gap-2 cursor-pointer"><WifiHigh /> Possui Wi-Fi?</FormLabel>
                                 </FormItem>
                             )} />
 
                             <FormField control={form.control} name="has_smokers" render={({ field }) => (
                                 <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 bg-slate-50">
-                                    <FormControl><Checkbox checked={field.value} onChange={(e) => field.onChange(e.target.checked)} /></FormControl>
+                                    <FormControl>
+                                        <Checkbox
+                                            checked={!!field.value}
+                                            onCheckedChange={(val) => field.onChange(!!val)}
+                                        />
+                                    </FormControl>
                                     <FormLabel className="flex items-center gap-2 cursor-pointer text-amber-700"><Warning /> Fumantes?</FormLabel>
                                 </FormItem>
                             )} />

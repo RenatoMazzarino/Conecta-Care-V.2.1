@@ -36,7 +36,10 @@ export default async function PatientDetailsPage({ params }: PatientDetailsPageP
     if (!patient) return notFound();
     
     const initials = patient.full_name.split(' ').map((n: string) => n[0]?.toUpperCase()).slice(0, 2).join('');
-    const contractorName = patient.contractor?.name || 'Particular';
+    const contractor = patient.contractor as any;
+    const contractorName = Array.isArray(contractor)
+        ? contractor[0]?.name || 'Particular'
+        : contractor?.name || 'Particular';
 
     return (
         <div className="min-h-screen bg-slate-50/50">

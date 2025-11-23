@@ -34,7 +34,7 @@ const GaugeCard = ({ title, value, max, colorClass }: { title: string; value?: n
 };
 
 export function TabClinical({ patient }: TabClinicalProps) {
-  const clinical = patient.clinical?.[0] || {};
+  const clinical = (patient.clinical?.[0] as any) || {};
   const medicationsList = (patient as any)?.medications || [];
 
   const form = useForm<PatientClinicalDTO>({
@@ -211,7 +211,10 @@ export function TabClinical({ patient }: TabClinicalProps) {
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center space-x-3 space-y-0">
                     <FormControl>
-                      <Checkbox checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+                      <Checkbox
+                        checked={!!field.value}
+                        onCheckedChange={(val) => field.onChange(!!val)}
+                      />
                     </FormControl>
                     <FormLabel className="cursor-pointer font-semibold">Paciente faz uso de O2?</FormLabel>
                   </FormItem>
@@ -335,7 +338,10 @@ export function TabClinical({ patient }: TabClinicalProps) {
                       render={({ field }) => (
                         <FormItem className="flex items-center space-x-2 space-y-0">
                           <FormControl>
-                            <Checkbox checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+                            <Checkbox
+                              checked={!!field.value}
+                              onCheckedChange={(val) => field.onChange(!!val)}
+                            />
                           </FormControl>
                           <FormLabel className="cursor-pointer text-xs font-bold text-rose-600">Crítico</FormLabel>
                         </FormItem>

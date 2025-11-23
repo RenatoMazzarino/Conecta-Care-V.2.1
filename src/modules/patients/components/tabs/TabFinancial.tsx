@@ -40,14 +40,14 @@ const statusTone: Record<string, string> = {
 
 export function TabFinancial({ patient }: { patient: FullPatientDetails }) {
     // Dados vindos do Banco
-    const financial = patient.financial_profile?.[0] || {};
+    const financial = (patient as any).financial?.[0] || {};
     const ledger: FinancialRecordDTO[] = patient.ledger || [];
 
     // Ordenar Ledger (Mais recente primeiro)
     const sortedLedger = [...ledger].sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime());
 
     const form = useForm<PatientFinancialProfileDTO>({
-        resolver: zodResolver(PatientFinancialProfileSchema),
+        resolver: zodResolver(PatientFinancialProfileSchema) as any,
         defaultValues: {
             patient_id: patient.id,
             bond_type: financial.bond_type ?? 'Particular',
@@ -149,7 +149,15 @@ export function TabFinancial({ patient }: { patient: FullPatientDetails }) {
                                     <FormField control={form.control} name="billing_due_day" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Dia Venc.</FormLabel>
-                                            <FormControl><Input type="number" min={1} max={31} {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
+                                            <FormControl>
+                                              <Input
+                                                type="number"
+                                                min={1}
+                                                max={31}
+                                                value={field.value ?? ""}
+                                                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                              />
+                                            </FormControl>
                                         </FormItem>
                                     )} />
                                     

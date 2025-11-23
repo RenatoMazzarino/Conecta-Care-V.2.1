@@ -28,10 +28,10 @@ export function TabAdministrative({ patient }: { patient: FullPatientDetails }) 
     const admin = (patient?.administrative as any)?.[0] || {};
     
     // Busca complexidade do perfil clínico (somente leitura ou edição compartilhada)
-    const clinical = patient.clinical?.[0] || {};
+    const clinical = (patient.clinical?.[0] as any) || {};
 
     const form = useForm<PatientAdministrativeDTO>({
-        resolver: zodResolver(PatientAdministrativeSchema),
+        resolver: zodResolver(PatientAdministrativeSchema) as any,
         defaultValues: {
             patient_id: patient.id,
             admission_date: admin.admission_date ? new Date(admin.admission_date) : undefined,
@@ -147,7 +147,7 @@ export function TabAdministrative({ patient }: { patient: FullPatientDetails }) 
                             <div className="flex gap-4 text-sm">
                                 <div>
                                     <span className="text-slate-500">Complexidade Atual: </span>
-                                    <span className="font-bold text-[#0F2B45]">{clinical.complexity_level?.toUpperCase() || "NÃO DEFINIDA"}</span>
+                                    <span className="font-bold text-[#0F2B45]">{clinical?.complexity_level?.toUpperCase() || "NÃO DEFINIDA"}</span>
                                 </div>
                                 <div>
                                     <span className="text-slate-500">Principal CID: </span>

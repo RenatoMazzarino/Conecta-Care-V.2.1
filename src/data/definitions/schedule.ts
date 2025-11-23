@@ -46,3 +46,13 @@ export const ShiftMonitorDataZ = z.object({
 });
 
 export type ShiftMonitorDataDTO = z.infer<typeof ShiftMonitorDataZ>;
+
+// --- Agendamento de plantão ---
+export const CreateShiftSchema = z.object({
+  patient_id: z.string().uuid({ message: "Selecione um paciente" }),
+  professional_id: z.string().uuid().optional(), // Opcional (vaga aberta)
+  date: z.coerce.date(),
+  shift_type: z.enum(['day', 'night']),
+});
+
+export type CreateShiftDTO = z.infer<typeof CreateShiftSchema>;

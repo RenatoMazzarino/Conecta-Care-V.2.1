@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { addDays, format, isSameDay, parseISO } from "date-fns";
 import { ShiftMonitorDataDTO } from "@/data/definitions/schedule";
+import { CreateShiftSchema, CreateShiftDTO } from "@/data/definitions/schedule";
 import { 
   ScheduleRow, 
   ScheduleSlot, 
@@ -10,6 +11,7 @@ import {
   WeekDay, 
   buildWeekDays 
 } from "./utils";
+import { revalidatePath } from "next/cache";
 
 /**
  * Busca a grade de escala completa para um intervalo de datas.
@@ -79,11 +81,11 @@ export async function getScheduleGrid(startDate: Date, daysToRender: number = 7)
     const slots: Record<string, { day: ScheduleSlot; night: ScheduleSlot }> = {};
 
     days.forEach(day => {
-      // Configuração padrão de slot vazio (Planejado)
+      // Configuração padrão de slot vazio (Livre)
       const emptySlot: ScheduleSlot = {
         id: `empty-${patient.id}-${day.key}`,
         shiftType: 'day', // placeholder
-        status: 'planned',
+        status: 'free',
       };
 
       slots[day.key] = {
@@ -169,7 +171,15 @@ export async function getShiftDetails(shiftId: string): Promise<ShiftMonitorData
     .eq('id', shiftId)
     .single();
 
-  if (error || !shift) return null;
+  // Debug detalhado para ver erros de Supabase/RLS
+  if (error) {
+    console.error("❌ ERRO AO BUSCAR DETALHES DO PLANTÃO:", error);
+    return null;
+  }
+  if (!shift) {
+    console.error("❌ Plantão não encontrado no banco para o ID:", shiftId);
+    return null;
+  }
 
   return {
     shiftId: shift.id,
@@ -217,4 +227,59 @@ export async function getShiftDetails(shiftId: string): Promise<ShiftMonitorData
       message: note.message || '',
     })),
   } as ShiftMonitorDataDTO;
+}
+
+// Cria um plantão manualmente (ou vaga aberta)
+export async function createShiftAction(data: CreateShiftDTO) {
+  const supabase = await createClient();
+  const parsed = CreateShiftSchema.safeParse(data);
+
+  if (!parsed.success) return { success: false, error: "Dados inválidos." };
+  
+  const { patient_id, professional_id, date, shift_type } = parsed.data;
+
+  const start = new Date(date);
+  const end = new Date(date);
+
+  if (shift_type === 'day') {
+    start.setHours(7, 0, 0, 0);
+    end.setHours(19, 0, 0, 0);
+  } else {
+    start.setHours(19, 0, 0, 0);
+    end.setDate(end.getDate() + 1);
+    end.setHours(7, 0, 0, 0);
+  }
+
+  const { error } = await supabase.from('shifts').insert({
+    patient_id,
+    professional_id: professional_id || null,
+    start_time: start.toISOString(),
+    end_time: end.toISOString(),
+    shift_type,
+    status: professional_id ? 'scheduled' : 'published',
+    candidate_count: 0
+  });
+
+  if (error) {
+    console.error("Erro ao criar plantão:", error);
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath('/schedule');
+  return { success: true };
+}
+
+// Busca listas simples para selects (pacientes/profissionais ativos)
+export async function getSchedulingOptions() {
+  const supabase = await createClient();
+  
+  const [patients, professionals] = await Promise.all([
+    supabase.from('patients').select('id, full_name').eq('status', 'active').order('full_name'),
+    supabase.from('professional_profiles').select('user_id, full_name, role').eq('is_active', true).order('full_name')
+  ]);
+
+  return {
+    patients: patients.data || [],
+    professionals: professionals.data || []
+  };
 }

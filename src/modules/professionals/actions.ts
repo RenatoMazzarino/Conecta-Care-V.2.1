@@ -1,6 +1,5 @@
 'use server'
 
-import { randomUUID } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { ProfessionalSchema, ProfessionalDTO } from "@/data/definitions/professional";
 import { revalidatePath } from "next/cache";
@@ -12,7 +11,10 @@ export async function getProfessionalsAction() {
     .select('*')
     .order('full_name');
     
-  if (error) console.error("Erro ao buscar profissionais:", error);
+  if (error) {
+    console.error("Erro ao buscar profissionais:", error?.message || error);
+    return [];
+  }
   return data || [];
 }
 
@@ -23,11 +25,8 @@ export async function upsertProfessionalAction(data: ProfessionalDTO) {
   if (!parsed.success) return { success: false, error: "Dados inválidos." };
   const form = parsed.data;
 
-  // Se não vier user_id, criamos um UUID para identificar o perfil no futuro
-  const userId = form.user_id ?? randomUUID();
-
   const payload = {
-    user_id: userId,
+    ...(form.user_id ? { user_id: form.user_id } : {}),
     full_name: form.full_name,
     social_name: form.social_name,
     cpf: form.cpf,
