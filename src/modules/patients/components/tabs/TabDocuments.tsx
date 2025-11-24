@@ -163,35 +163,48 @@ export function TabDocuments({ patient }: { patient: FullPatientDetails }) {
 
     return (
         <div className="flex flex-col lg:flex-row gap-6 pb-20">
-            
-            {/* SIDEBAR DE FILTROS */}
+            {/* Sidebar */}
             <div className="lg:w-64 flex-shrink-0">
-                <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-2">
-                    <p className="px-3 py-2 text-xs font-bold uppercase text-slate-400 tracking-wider">Pastas</p>
+                <div className="bg-white rounded-md border border-slate-200 shadow-fluent p-2 space-y-2">
+                    <p className="px-3 py-2 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Pastas Digitais</p>
                     <div className="space-y-1">
-                        <button 
+                        <button
                             onClick={() => setFilter('all')}
-                            className={cn("w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors", filter === 'all' ? "bg-[#0F2B45]/10 text-[#0F2B45]" : "text-slate-600 hover:bg-slate-50")}
+                            className={cn(
+                                "w-full flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-md transition-all border border-transparent",
+                                filter === 'all'
+                                    ? "bg-slate-50 text-[#0F2B45] border-l-4 border-l-[#0F2B45]"
+                                    : "text-slate-700 hover:bg-slate-50"
+                            )}
                         >
                             <FolderSimple size={18} weight={filter === 'all' ? 'fill' : 'regular'} />
                             Todos
                             <Badge variant="secondary" className="ml-auto bg-white">{documents.length}</Badge>
                         </button>
                         {CATEGORIES.map(cat => (
-                            <button 
+                            <button
                                 key={cat.id}
                                 onClick={() => setFilter(cat.id)}
-                                className={cn("w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors", filter === cat.id ? "bg-[#0F2B45]/10 text-[#0F2B45]" : "text-slate-600 hover:bg-slate-50")}
+                                className={cn(
+                                    "w-full flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-md transition-all border border-transparent",
+                                    filter === cat.id
+                                        ? "bg-slate-50 text-[#0F2B45] border-l-4 border-l-[#0F2B45]"
+                                        : "text-slate-700 hover:bg-slate-50"
+                                )}
                             >
                                 <cat.icon size={18} weight={filter === cat.id ? 'fill' : 'regular'} />
                                 {cat.label}
                             </button>
                         ))}
                     </div>
+
+                    <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 flex items-center gap-2">
+                        <WarningCircle weight="fill" /> 1 Doc vencido
+                    </div>
                 </div>
             </div>
 
-            {/* LISTA DE ARQUIVOS */}
+            {/* Conteúdo */}
             <div className="flex-1 space-y-4">
                 <div className="flex justify-between items-center">
                     <h3 className="text-sm font-bold text-[#0F2B45] uppercase tracking-wide">
@@ -200,9 +213,16 @@ export function TabDocuments({ patient }: { patient: FullPatientDetails }) {
                     <UploadDialog patientId={patient.id} />
                 </div>
 
+                {/* Área de upload rápida */}
+                <div className="border-2 border-dashed border-slate-200 rounded-md p-6 text-center bg-white hover:border-slate-300 transition">
+                    <UploadSimple className="mx-auto h-8 w-8 text-slate-400" />
+                    <p className="text-sm font-semibold text-slate-700 mt-2">Arraste arquivos ou clique para selecionar</p>
+                    <p className="text-xs text-slate-500">PDF, imagens ou outros formatos permitidos.</p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {filteredDocs.length === 0 ? (
-                        <div className="col-span-full py-12 text-center border-2 border-dashed border-slate-200 rounded-lg">
+                        <div className="col-span-full py-12 text-center border-2 border-dashed border-slate-200 rounded-lg bg-white">
                             <FolderSimple size={48} className="mx-auto text-slate-300 mb-2"/>
                             <p className="text-slate-500 font-medium">Nenhum documento encontrado.</p>
                             <p className="text-xs text-slate-400">Faça upload para começar.</p>
@@ -211,7 +231,7 @@ export function TabDocuments({ patient }: { patient: FullPatientDetails }) {
                         filteredDocs.map((doc: any) => {
                             const visual = getFileIcon(doc.mime_type);
                             return (
-                                <div key={doc.id} className="group bg-white border border-slate-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all">
+                                <div key={doc.id} className="group bg-white border border-slate-200 rounded-lg p-4 shadow-fluent hover:shadow-fluent-hover transition-all">
                                     <div className="flex items-start gap-3">
                                         <div className={cn("w-10 h-10 flex items-center justify-center rounded-lg border", visual.color)}>
                                             <visual.icon size={20} weight="duotone" />

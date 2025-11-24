@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Package, Plus, Trash, QrCode, Tag, Calendar } from "@phosphor-icons/react";
+import { Package, Plus, Trash, QrCode, Tag, Calendar, ArrowUUpLeft } from "@phosphor-icons/react";
 import { format } from "date-fns";
 
 // --- DIALOG DE ADICIONAR ITEM ---
@@ -126,56 +126,83 @@ export function TabInventory({ patient }: { patient: FullPatientDetails }) {
 
     return (
         <div className="space-y-6">
-            <Card className="shadow-fluent border-none">
-                <CardHeader className="border-b border-slate-100 pb-4 flex flex-row items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[#0F2B45]">
-                        <Package size={20} /> Inventário no Domicílio
+            <Card className="bg-white border border-slate-200 border-t-4 border-t-cyan-600 rounded-md shadow-fluent">
+                <CardHeader className="border-b border-slate-100 pb-3 flex flex-row items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-cyan-800">
+                        <Package size={18} /> Inventário no Domicílio
                     </CardTitle>
                     <AddItemDialog patientId={patient.id} masterItems={masterItems} onSave={handleSave} />
                 </CardHeader>
                 <CardContent className="p-0">
                     {inventory.length === 0 ? (
-                        <div className="text-center py-10 text-slate-400">
-                            <Package size={32} className="mx-auto mb-2 opacity-50"/>
-                            <p>Nenhum item alocado neste domicílio.</p>
+                        <div className="text-center py-12 text-slate-400">
+                            <Package size={40} className="mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">Nenhum item alocado neste domicílio.</p>
                         </div>
                     ) : (
-                        <div className="divide-y divide-slate-100">
-                            {inventory.map((record: any) => (
-                                <div key={record.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                                    <div className="flex items-start gap-3">
-                                        <div className={`p-2 rounded-lg ${record.item?.category === 'equipment' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                                            {record.item?.category === 'equipment' ? <QrCode size={20}/> : <Tag size={20}/>}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                                {record.item?.name || 'Item sem nome'}
-                                                {record.serial_number && <Badge variant="outline" className="font-mono text-[10px] text-slate-500">SN: {record.serial_number}</Badge>}
-                                            </p>
-                                            <div className="flex gap-3 text-xs text-slate-500 mt-1">
-                                                <span className="font-semibold">Qtd: {record.current_quantity}</span>
-                                                <span>•</span>
-                                                <span>{record.location_note || "Sem local definido"}</span>
-                                                {record.installed_at && (
-                                                    <>
-                                                        <span>•</span>
-                                                        <span className="flex items-center gap-1"><Calendar size={12}/> {format(new Date(record.installed_at), 'dd/MM/yyyy')}</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-2">
-                                        <Badge className={record.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'}>
-                                            {record.status === 'active' ? 'Em Uso' : 'Devolvido'}
-                                        </Badge>
-                                        <Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-500" onClick={() => handleDelete(record.id)}>
-                                            <Trash />
-                                        </Button>
-                                    </div>
-                                </div>
-                            ))}
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-slate-50 text-[11px] uppercase text-slate-500">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left">Item</th>
+                                        <th className="px-4 py-3 text-left">Detalhes</th>
+                                        <th className="px-4 py-3 text-left">Local</th>
+                                        <th className="px-4 py-3 text-left">Data</th>
+                                        <th className="px-4 py-3 text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {inventory.map((record: any) => (
+                                        <tr key={record.id} className="border-b border-slate-50 hover:bg-slate-50/70">
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`p-2 rounded-lg ${record.item?.category === 'equipment' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                                        {record.item?.category === 'equipment' ? <QrCode size={18}/> : <Tag size={18}/>}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-slate-800">{record.item?.name || 'Item sem nome'}</p>
+                                                        {record.serial_number && (
+                                                            <Badge variant="outline" className="font-mono text-[10px] text-slate-600 mt-1">SN: {record.serial_number}</Badge>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-xs text-slate-600">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="font-semibold">Qtd: {record.current_quantity}</span>
+                                                    <span className="text-slate-500">{record.status === 'active' ? 'Em uso' : 'Devolvido'}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-xs text-slate-600">
+                                                {record.location_note || "Sem local definido"}
+                                            </td>
+                                            <td className="px-4 py-3 text-xs text-slate-600">
+                                                {record.installed_at ? format(new Date(record.installed_at), 'dd/MM/yyyy') : '—'}
+                                            </td>
+                                            <td className="px-4 py-3 text-right">
+                                                <div className="flex justify-end items-center gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-8 text-xs flex items-center gap-1"
+                                                        onClick={() => handleDelete(record.id)}
+                                                    >
+                                                        <ArrowUUpLeft size={14} /> Devolver
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="text-slate-300 hover:text-rose-500"
+                                                        onClick={() => handleDelete(record.id)}
+                                                    >
+                                                        <Trash size={16} />
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     )}
                 </CardContent>

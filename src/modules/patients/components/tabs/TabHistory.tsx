@@ -35,13 +35,13 @@ export function TabHistory({ patient }: { patient: { id: string } }) {
 
     return (
         <div className="space-y-6">
-            <Card className="shadow-fluent border-none">
-                <CardHeader className="border-b border-slate-100 pb-4">
+            <Card className="bg-white border border-slate-200 rounded-md shadow-fluent">
+                <CardHeader className="border-b border-slate-100 pb-3">
                     <CardTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[#0F2B45]">
-                        <ClockCounterClockwise size={20} /> Linha do Tempo (Auditoria)
+                        <ClockCounterClockwise size={18} /> Linha do Tempo (Auditoria)
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6 bg-slate-50/30 min-h-[400px]">
+                <CardContent className="p-6 bg-slate-50/40 min-h-[400px]">
                     {loading ? (
                         <div className="text-center text-slate-400 py-10">Carregando timeline...</div>
                     ) : logs.length === 0 ? (
@@ -50,7 +50,7 @@ export function TabHistory({ patient }: { patient: { id: string } }) {
                             <p>Nenhuma alteração registrada.</p>
                         </div>
                     ) : (
-                        <div className="relative space-y-0 before:absolute before:inset-0 before:ml-6 before:-translate-x-px before:h-full before:w-0.5 before:bg-slate-200 before:content-['']">
+                        <div className="relative space-y-0 pl-4 before:absolute before:top-0 before:bottom-0 before:left-6 before:w-0.5 before:bg-slate-200">
                             {logs.map((log) => {
                                 const style = actionStyles[log.action] || actionStyles.UPDATE;
                                 const Icon = style.icon;
@@ -58,14 +58,12 @@ export function TabHistory({ patient }: { patient: { id: string } }) {
                                 
                                 return (
                                     <div key={log.id} className="relative flex gap-6 pb-8 last:pb-0 group">
-                                        {/* Ícone da Timeline */}
-                                        <div className={`relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-4 border-slate-50 bg-white shadow-sm`}>
+                                        <div className="relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-4 border-slate-50 bg-white shadow-sm">
                                             <div className={`flex h-8 w-8 items-center justify-center rounded-full ${style.bg}`}>
                                                 <Icon className={`h-4 w-4 ${style.color}`} weight="bold" />
                                             </div>
                                         </div>
 
-                                        {/* Card do Evento */}
                                         <div className="flex-1 rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md hover:border-slate-300">
                                             <div className="flex items-start justify-between">
                                                 <div>
@@ -80,7 +78,7 @@ export function TabHistory({ patient }: { patient: { id: string } }) {
                                                     <p className="text-sm font-bold text-slate-800">{log.description}</p>
                                                     <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
                                                         <User size={12} />
-                                                        <span>Feito por: <strong className="text-slate-700">{log.actor_name}</strong></span>
+                                                        <span>Por: <strong className="text-slate-700">{log.actor_name}</strong></span>
                                                         <span className="text-slate-300">•</span>
                                                         <span>{log.time_ago}</span>
                                                     </div>
@@ -93,10 +91,9 @@ export function TabHistory({ patient }: { patient: { id: string } }) {
                                                 )}
                                             </div>
 
-                                            {/* Detalhes Técnicos (O Diff) */}
                                             {isExpanded && log.changes && (
                                                 <div className="mt-4 p-3 bg-slate-50 rounded border border-slate-100 text-xs font-mono overflow-x-auto">
-                                                    <p className="text-[10px] font-bold uppercase text-slate-400 mb-2">Detalhes da Alteração (JSON)</p>
+                                                    <p className="text-[10px] font-bold uppercase text-slate-400 mb-2">Detalhes da Alteração</p>
                                                     <pre className="text-slate-600 whitespace-pre-wrap break-words">{JSON.stringify(log.changes, null, 2)}</pre>
                                                 </div>
                                             )}

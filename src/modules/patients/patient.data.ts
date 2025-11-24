@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { addDays } from "date-fns";
 import { PatientFinancialProfileDTO, FinancialRecordDTO } from "@/data/definitions/financial";
 import { PatientClinicalDTO } from "@/data/definitions/clinical";
 import { EmergencyContactDTO, CareTeamMemberDTO } from "@/data/definitions/team";
@@ -140,6 +141,59 @@ type PatientListItem = Pick<
   "id" | "full_name" | "cpf" | "gender" | "date_of_birth" | "status" | "created_at"
 >;
 
+// --- TIPO PARA A LISTAGEM (DATA GRID) ---
+export type PatientGridItem = {
+  id: string;
+  full_name: string;
+  social_name?: string | null;
+  age: number | null;
+  city?: string;
+  neighborhood?: string | null;
+  zone_type?: string | null;
+  gender?: string | null;
+  status: string;
+  complexity_level: 'low' | 'medium' | 'high' | 'critical' | null;
+  diagnosis_main?: string | null;
+  contractor_name?: string;
+  billing_status: string;
+  next_shift?: {
+    date: string;
+    professional_name?: string;
+    is_open: boolean;
+  } | null;
+  supervisor_name?: string | null;
+  admission_type?: string | null;
+  clinical_tags?: string[];
+};
+
+export type GetPatientsParams = {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: string;
+  complexity?: string;
+  billingStatus?: string;
+  contractorId?: string;
+  city?: string;
+  neighborhood?: string;
+  zoneType?: string;
+  diagnosis?: string;
+  admissionType?: string;
+  supervisor?: string;
+  clinicalTag?: string;
+  gender?: string;
+  ageMin?: number;
+  ageMax?: number;
+  bondType?: string;
+  paymentMethod?: string;
+  contractStatus?: string;
+  riskBradenMin?: number;
+  riskBradenMax?: number;
+  riskMorseMin?: number;
+  riskMorseMax?: number;
+  oxygenUsage?: string;
+};
+
 // --- FUNÇÕES DE BUSCA ---
 
 export async function getPatients(): Promise<PatientListItem[]> {
@@ -164,6 +218,200 @@ export async function getPatients(): Promise<PatientListItem[]> {
   }
 
   return patients ?? [];
+}
+
+// Busca paginada com joins para grid
+export async function getPatientsPaginated(params: GetPatientsParams = {}) {
+  const supabase = await createClient();
+  const {
+    page = 1,
+    pageSize = 20,
+    search,
+    status,
+    complexity,
+    billingStatus,
+    contractorId,
+    city,
+    neighborhood,
+    zoneType,
+    diagnosis,
+    admissionType,
+    supervisor,
+    clinicalTag,
+    gender,
+    ageMin,
+    ageMax,
+    bondType,
+    paymentMethod,
+    contractStatus,
+    riskBradenMin,
+    riskBradenMax,
+    riskMorseMin,
+    riskMorseMax,
+    oxygenUsage
+  } = params;
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .from("patients")
+    .select(`
+      id, full_name, social_name, date_of_birth, status, gender,
+      contractor:contractors(id, name),
+      address:patient_addresses(city, neighborhood, zone_type),
+      clinical:patient_clinical_profiles(complexity_level, diagnosis_main, clinical_tags, risk_braden, risk_morse, oxygen_usage),
+      financial:patient_financial_profiles(billing_status, bond_type, payment_method),
+      administrative:patient_administrative_profiles(admission_type, technical_supervisor_name, contract_status),
+      shifts(start_time, professional_id)
+    `, { count: 'exact' });
+
+  if (search) {
+    query = query.or(`full_name.ilike.%${search}%,cpf.ilike.%${search}%`);
+  }
+  if (status && status !== 'all') {
+    query = query.eq('status', status);
+  }
+  if (gender && gender !== 'all') {
+    query = query.eq('gender', gender);
+  }
+  if (contractorId && contractorId !== 'all') {
+    query = query.eq('contractor.id', contractorId);
+  }
+  if (billingStatus && billingStatus !== 'all') {
+    query = query.eq('financial.billing_status', billingStatus);
+  }
+  if (bondType && bondType !== 'all') {
+    query = query.eq('financial.bond_type', bondType);
+  }
+  if (contractStatus && contractStatus !== 'all') {
+    query = query.eq('administrative.contract_status', contractStatus);
+  }
+  if (complexity && complexity !== 'all') {
+    query = query.eq('clinical.complexity_level', complexity);
+  }
+  if (city) {
+    query = query.ilike('address.city', `%${city}%`);
+  }
+  if (neighborhood) {
+    query = query.ilike('address.neighborhood', `%${neighborhood}%`);
+  }
+  if (zoneType && zoneType !== 'all') {
+    query = query.eq('address.zone_type', zoneType);
+  }
+  if (diagnosis) {
+    query = query.ilike('clinical.diagnosis_main', `%${diagnosis}%`);
+  }
+  if (admissionType && admissionType !== 'all') {
+    query = query.eq('administrative.admission_type', admissionType);
+  }
+  if (supervisor) {
+    query = query.ilike('administrative.technical_supervisor_name', `%${supervisor}%`);
+  }
+  if (clinicalTag) {
+    query = query.contains('clinical.clinical_tags', [clinicalTag]);
+  }
+  if (paymentMethod) {
+    query = query.ilike('financial.payment_method', `%${paymentMethod}%`);
+  }
+  if (riskBradenMin !== undefined) {
+    query = query.gte('clinical.risk_braden', riskBradenMin);
+  }
+  if (riskBradenMax !== undefined) {
+    query = query.lte('clinical.risk_braden', riskBradenMax);
+  }
+  if (riskMorseMin !== undefined) {
+    query = query.gte('clinical.risk_morse', riskMorseMin);
+  }
+  if (riskMorseMax !== undefined) {
+    query = query.lte('clinical.risk_morse', riskMorseMax);
+  }
+  if (oxygenUsage === 'yes') {
+    query = query.eq('clinical.oxygen_usage', true);
+  } else if (oxygenUsage === 'no') {
+    query = query.eq('clinical.oxygen_usage', false);
+  }
+  if (ageMin || ageMax) {
+    const today = new Date();
+    if (ageMin) {
+      const maxBirth = new Date(today);
+      maxBirth.setFullYear(today.getFullYear() - ageMin);
+      query = query.lte('date_of_birth', maxBirth.toISOString());
+    }
+    if (ageMax) {
+      const minBirth = new Date(today);
+      minBirth.setFullYear(today.getFullYear() - ageMax);
+      query = query.gte('date_of_birth', minBirth.toISOString());
+    }
+  }
+  if (contractorId && contractorId !== 'all') {
+    query = query.eq('contractor.id', contractorId);
+  }
+
+  if (billingStatus && billingStatus !== 'all') {
+    query = query.eq('financial.billing_status', billingStatus);
+  }
+
+  query = query.order("full_name", { ascending: true }).range(from, to);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error("Erro no Grid de Pacientes:", error);
+    return { data: [], total: 0, stats: { active: 0, hospitalized: 0, total: 0 } };
+  }
+
+  const now = new Date();
+
+  let formatted: PatientGridItem[] = (data || []).map((p: any) => {
+    const birth = p.date_of_birth ? new Date(p.date_of_birth) : null;
+    const age = birth ? now.getFullYear() - birth.getFullYear() - (now < addDays(new Date(now.getFullYear(), birth.getMonth(), birth.getDate()), 0) ? 1 : 0) : null;
+
+    // Próximo plantão simples: menor start_time futuro na lista (já que não ordenamos no select)
+    const futureShifts = (p.shifts || []).filter((s: any) => new Date(s.start_time) >= now);
+    const nextShiftData = futureShifts.sort((a: any, b: any) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())[0];
+    const nextShift = nextShiftData
+      ? {
+          date: nextShiftData.start_time,
+          is_open: !nextShiftData.professional_id,
+          professional_name: nextShiftData.professional_id ? 'Escalado' : undefined,
+        }
+      : null;
+
+    return {
+      id: p.id,
+      full_name: p.full_name,
+      social_name: p.social_name,
+      age,
+      gender: p.gender,
+      city: p.address?.[0]?.city || 'Local não inf.',
+      status: p.status,
+      complexity_level: p.clinical?.[0]?.complexity_level || null,
+      diagnosis_main: p.clinical?.[0]?.diagnosis_main,
+      contractor_name: p.contractor?.name || 'Particular',
+      billing_status: p.financial?.[0]?.billing_status || 'active',
+      next_shift: nextShift,
+      supervisor_name: p.administrative?.[0]?.technical_supervisor_name || null,
+      // extras for filter check
+      neighborhood: p.address?.[0]?.neighborhood,
+      zone_type: p.address?.[0]?.zone_type,
+      admission_type: p.administrative?.[0]?.admission_type,
+      clinical_tags: p.clinical?.[0]?.clinical_tags || []
+    };
+  });
+
+  const stats = {
+    total: count || 0,
+    active: formatted.filter((p) => p.status === 'active').length,
+    hospitalized: formatted.filter((p) => p.status === 'hospitalized').length,
+  };
+
+  return {
+    data: formatted,
+    total: count || 0,
+    totalPages: Math.ceil((count || 0) / pageSize),
+    stats,
+  };
 }
 
 export async function getPatientDetails(patientId: string): Promise<FullPatientDetails | null> {

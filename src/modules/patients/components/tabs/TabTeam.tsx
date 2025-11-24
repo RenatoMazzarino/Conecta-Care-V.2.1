@@ -129,58 +129,107 @@ export function TabTeam({ patient }: { patient: FullPatientDetails }) {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-                
-                {/* COLUNA ESQUERDA: EQUIPE TÉCNICA */}
-                <div className="xl:col-span-7 space-y-6">
-                    <Card className="shadow-fluent border-none">
-                        <CardHeader className="border-b border-slate-100 pb-4 flex flex-row items-center justify-between">
-                            <CardTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[#0F2B45]">
-                                <Users size={20} /> Equipe Multidisciplinar Fixa
-                            </CardTitle>
-                            <Button size="sm" className="bg-[#0F2B45] text-white h-8">
-                                <Plus className="mr-2"/> Adicionar Profissional
-                            </Button>
-                        </CardHeader>
-                        <CardContent className="pt-6 space-y-3">
-                            {team.length === 0 ? (
-                                <div className="text-center py-8 text-slate-400 border-2 border-dashed rounded-lg">
-                                    <p>Nenhum profissional alocado fixamente.</p>
-                                    <p className="text-xs">Use a busca para adicionar médicos, enfermeiros ou técnicos.</p>
+        <div className="grid grid-cols-12 gap-6">
+            {/* Equipe */}
+            <div className="col-span-12 xl:col-span-7 space-y-4">
+                <Card className="bg-white border border-slate-200 border-t-4 border-t-[#0F2B45] rounded-md shadow-fluent">
+                    <CardHeader className="border-b border-slate-100 pb-3 flex flex-row items-center justify-between">
+                        <CardTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[#0F2B45]">
+                            <Users size={18} /> Equipe Multidisciplinar
+                        </CardTitle>
+                        <Button size="sm" variant="outline" className="h-8 text-xs">
+                            <Plus className="mr-2 h-3 w-3" /> Adicionar
+                        </Button>
+                    </CardHeader>
+                    <CardContent className="pt-4 space-y-3">
+                        {team.length === 0 ? (
+                            <div className="text-center py-8 text-slate-400 border border-dashed border-slate-200 rounded-md">
+                                <p>Nenhum profissional alocado.</p>
+                                <p className="text-xs">Inclua enfermeiros, técnicos ou médicos fixos.</p>
+                            </div>
+                        ) : (
+                            team.map((member: any) => (
+                                <div key={member.id} className="flex items-center justify-between px-3 py-3 rounded-md border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition">
+                                    <div className="flex items-center gap-3">
+                                        <Avatar className="h-10 w-10 border-2 border-white shadow-sm bg-slate-100">
+                                            <AvatarFallback className="text-[#0F2B45] font-bold">
+                                                {member.professional?.full_name?.substring(0, 2)?.toUpperCase() || "??"}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-bold text-[#0F2B45] flex items-center gap-2">
+                                                {member.professional?.full_name}
+                                                {member.is_primary && (
+                                                    <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-800 px-1.5">
+                                                        <Star weight="fill" className="mr-1" /> Focal
+                                                    </Badge>
+                                                )}
+                                            </p>
+                                            <p className="text-[11px] font-semibold uppercase text-slate-500">{member.role}</p>
+                                        </div>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="text-slate-300 hover:text-rose-500" onClick={() => handleDeleteTeam(member.id)}>
+                                        <Trash size={16} />
+                                    </Button>
                                 </div>
-                            ) : (
-                                team.map((member: any) => (
-                                    <TeamMemberCard key={member.id} member={member} onDelete={handleDeleteTeam} />
-                                ))
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
+                            ))
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
 
-                {/* COLUNA DIREITA: REDE DE APOIO */}
-                <div className="xl:col-span-5 space-y-6">
-                    <Card className="shadow-fluent border-none">
-                        <CardHeader className="border-b border-slate-100 pb-4 flex flex-row items-center justify-between">
-                            <CardTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-emerald-800">
-                                <Phone size={20} /> Rede de Apoio & Emergência
-                            </CardTitle>
-                            <AddContactDialog patientId={patient.id} onSave={upsertContactAction} />
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            {contacts.length === 0 ? (
-                                <p className="text-center py-8 text-slate-400">Nenhum contato cadastrado.</p>
-                            ) : (
-                                <div className="max-h-[500px] overflow-y-auto">
-                                    {contacts.map((contact: any) => (
-                                        <ContactRow key={contact.id} contact={contact} onDelete={handleDeleteContact} />
-                                    ))}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
-
+            {/* Contatos */}
+            <div className="col-span-12 xl:col-span-5 space-y-4">
+                <Card className="bg-white border border-slate-200 border-t-4 border-t-emerald-600 rounded-md shadow-fluent">
+                    <CardHeader className="border-b border-slate-100 pb-3 flex flex-row items-center justify-between">
+                        <CardTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-emerald-800">
+                            <Phone size={18} /> Rede de Apoio & Emergência
+                        </CardTitle>
+                        <AddContactDialog patientId={patient.id} onSave={upsertContactAction} />
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        {contacts.length === 0 ? (
+                            <p className="text-center py-8 text-slate-400">Nenhum contato cadastrado.</p>
+                        ) : (
+                            <div className="divide-y divide-slate-100">
+                                {contacts.map((contact: any) => (
+                                    <div key={contact.id} className="flex items-start justify-between px-4 py-3 hover:bg-slate-50 transition">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-semibold text-slate-900">{contact.full_name}</p>
+                                                <Badge variant="outline" className="text-[10px] bg-slate-50">{contact.relation}</Badge>
+                                                {contact.is_legal_representative && (
+                                                    <Badge className="text-[10px] bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                                                        <CheckCircle weight="fill" /> Legal
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-4 text-xs text-slate-500">
+                                                <span className="flex items-center gap-1"><Phone /> {contact.phone}</span>
+                                                {contact.email && <span className="flex items-center gap-1"><Envelope /> {contact.email}</span>}
+                                            </div>
+                                            <div className="flex gap-2 mt-1">
+                                                {contact.can_authorize_procedures && (
+                                                    <span className="text-[10px] flex items-center gap-1 text-emerald-700 bg-emerald-50 px-1.5 rounded border border-emerald-100">
+                                                        <CheckCircle /> Autoriza Proc.
+                                                    </span>
+                                                )}
+                                                {contact.can_view_record && (
+                                                    <span className="text-[10px] flex items-center gap-1 text-blue-700 bg-blue-50 px-1.5 rounded border border-blue-100">
+                                                        <FirstAid /> Acesso Pront.
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-rose-500" onClick={() => handleDeleteContact(contact.id)}>
+                                            <Trash size={14} />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );

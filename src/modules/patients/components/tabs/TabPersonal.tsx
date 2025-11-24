@@ -20,21 +20,10 @@ import {
   WhatsappLogo,
   FloppyDisk,
   WarningCircle,
+  IdentificationCard,
+  Files,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
-
-const Section = ({ title, icon, badge, children }: any) => (
-  <div className="mb-6 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-    <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3 text-sm font-bold uppercase tracking-wider text-[#0F2B45]">
-      <div className="flex items-center gap-2">
-        {icon}
-        <span>{title}</span>
-      </div>
-      {badge}
-    </div>
-    <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-12">{children}</div>
-  </div>
-);
 
 export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
   const legalGuardian = patient.contacts?.find((c: any) => c.is_legal_representative);
@@ -79,342 +68,429 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
     else toast.error(res.error);
   }
 
+  const labelCls = "text-xs font-bold uppercase text-slate-500";
+  const inputCls = "h-9 text-sm";
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="pb-20">
-        <Section
-          title="Identidade e Perfil Social"
-          icon={<UserCircle size={20} weight="bold" />}
-          badge={
-            form.watch("photo_consent") && (
-              <span className="flex items-center gap-1 text-[10px] font-bold uppercase text-emerald-700">
-                <CheckCircle weight="fill" /> Foto Concedida
-              </span>
-            )
-          }
-        >
-          <div className="md:col-span-2">
-            <FormField
-              control={form.control}
-              name="salutation"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tratamento</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Sr(a)." />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="md:col-span-5">
-            <FormField
-              control={form.control}
-              name="full_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome Civil Completo</FormLabel>
-                  <FormControl>
-                    <Input {...field} className="bg-slate-50 font-semibold" />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="md:col-span-5">
-            <FormField
-              control={form.control}
-              name="social_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome Social / Display</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <div className="md:col-span-3">
-            <FormField
-              control={form.control}
-              name="date_of_birth"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data de Nascimento</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="date"
-                      value={field.value ? format(field.value, "yyyy-MM-dd") : ""}
-                      onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="md:col-span-3">
-            <FormField
-              control={form.control}
-              name="gender"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sexo Biológico</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="M">Masculino</SelectItem>
-                      <SelectItem value="F">Feminino</SelectItem>
-                      <SelectItem value="Other">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="md:col-span-3">
-            <FormField
-              control={form.control}
-              name="pronouns"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Pronomes</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Ela/Dela" />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="md:col-span-3">
-            <FormField
-              control={form.control}
-              name="civil_status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Estado Civil</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Solteiro">Solteiro(a)</SelectItem>
-                      <SelectItem value="Casado">Casado(a)</SelectItem>
-                      <SelectItem value="Viúvo">Viúvo(a)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <div className="md:col-span-6">
-            <FormField
-              control={form.control}
-              name="mother_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome da Mãe</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="md:col-span-3">
-            <FormField
-              control={form.control}
-              name="nationality"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nacionalidade</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="md:col-span-3">
-            <FormField
-              control={form.control}
-              name="place_of_birth"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Naturalidade</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <div className="md:col-span-12 pt-2">
-            <FormField
-              control={form.control}
-              name="photo_consent"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                  <FormControl>
-                    <Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} />
-                  </FormControl>
-                  <FormLabel className="text-xs font-normal text-slate-600">
-                    Consentimento para uso de foto no prontuário e crachá.
-                  </FormLabel>
-                </FormItem>
-              )}
-            />
-          </div>
-        </Section>
-
-        <Section
-          title="Documentação Civil"
-          icon={<IdentificationBadge size={20} weight="bold" />}
-          badge={
-            <span className="rounded border border-blue-100 bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700">
-              Validação: {form.watch("document_validation_method")?.toUpperCase()}
-            </span>
-          }
-        >
-          <div className="md:col-span-3">
-            <FormField
-              control={form.control}
-              name="cpf"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>CPF</FormLabel>
-                  <FormControl>
-                    <Input {...field} className="font-mono" />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="md:col-span-3">
-            <FormField
-              control={form.control}
-              name="rg"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>RG</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="md:col-span-2">
-            <FormField
-              control={form.control}
-              name="rg_issuer"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Órgão</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="SSP" />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="md:col-span-4">
-            <FormField
-              control={form.control}
-              name="cns"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cartão SUS (CNS)</FormLabel>
-                  <FormControl>
-                    <Input {...field} className="font-mono bg-blue-50/30 text-blue-900" />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-        </Section>
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
-          <div className="md:col-span-7">
-            <Section title="Canais de Contato" icon={<Phone size={20} weight="bold" />}>
-              <div className="md:col-span-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-12 gap-6 pb-20">
+        {/* COLUNA ESQUERDA */}
+        <div className="col-span-12 lg:col-span-8 space-y-6">
+          {/* Identidade */}
+          <div className="bg-white border border-slate-200 rounded-md shadow-fluent p-6">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-4 text-[#0F2B45] font-bold text-base">
+              <IdentificationCard size={22} weight="duotone" /> Identidade Civil & Social
+            </div>
+            <div className="grid grid-cols-12 gap-4">
+              <div className="col-span-3">
                 <FormField
                   control={form.control}
-                  name="mobile_phone"
+                  name="salutation"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Celular Principal</FormLabel>
+                      <FormLabel className={labelCls}>Tratamento</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="(00) 00000-0000" className="h-11 text-lg font-bold" />
+                        <Input {...field} className={inputCls} placeholder="Sr(a)." />
                       </FormControl>
                     </FormItem>
                   )}
                 />
               </div>
-              <div className="md:col-span-6">
+              <div className="col-span-9 md:col-span-5">
                 <FormField
                   control={form.control}
-                  name="secondary_phone"
+                  name="full_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Telefone Secundário</FormLabel>
+                      <FormLabel className={labelCls}>Nome Completo</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="(00) 0000-0000" />
+                        <Input {...field} className={`${inputCls} bg-slate-50 font-semibold`} />
                       </FormControl>
                     </FormItem>
                   )}
                 />
               </div>
-              <div className="md:col-span-8">
+              <div className="col-span-12 md:col-span-4">
                 <FormField
                   control={form.control}
-                  name="email"
+                  name="social_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>E-mail</FormLabel>
+                      <FormLabel className={labelCls}>Nome Social</FormLabel>
                       <FormControl>
-                        <Input {...field} type="email" />
+                        <Input {...field} className={inputCls} />
                       </FormControl>
                     </FormItem>
                   )}
                 />
               </div>
-              <div className="md:col-span-4">
+              <div className="col-span-6 md:col-span-3">
                 <FormField
                   control={form.control}
-                  name="pref_contact_method"
+                  name="date_of_birth"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Preferência</FormLabel>
+                      <FormLabel className={labelCls}>Data de Nasc.</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          className={inputCls}
+                          value={field.value ? format(field.value, "yyyy-MM-dd") : ""}
+                          onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-6 md:col-span-3">
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={labelCls}>Sexo Biológico</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className={inputCls}>
                             <SelectValue />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="whatsapp">
-                            <WhatsappLogo className="mr-2 inline text-emerald-500" /> WhatsApp
-                          </SelectItem>
-                          <SelectItem value="phone">Ligação</SelectItem>
-                          <SelectItem value="email">E-mail</SelectItem>
+                          <SelectItem value="M">Masculino</SelectItem>
+                          <SelectItem value="F">Feminino</SelectItem>
+                          <SelectItem value="Other">Outro</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormItem>
                   )}
                 />
               </div>
+              <div className="col-span-6 md:col-span-3">
+                <FormField
+                  control={form.control}
+                  name="pronouns"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={labelCls}>Pronomes</FormLabel>
+                      <FormControl>
+                        <Input {...field} className={inputCls} placeholder="Ela/Dela" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-6 md:col-span-3">
+                <FormField
+                  control={form.control}
+                  name="civil_status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={labelCls}>Estado Civil</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className={inputCls}>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Solteiro">Solteiro(a)</SelectItem>
+                          <SelectItem value="Casado">Casado(a)</SelectItem>
+                          <SelectItem value="Viúvo">Viúvo(a)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-12 md:col-span-6">
+                <FormField
+                  control={form.control}
+                  name="mother_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={labelCls}>Nome da Mãe</FormLabel>
+                      <FormControl>
+                        <Input {...field} className={inputCls} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-6 md:col-span-3">
+                <FormField
+                  control={form.control}
+                  name="nationality"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={labelCls}>Nacionalidade</FormLabel>
+                      <FormControl>
+                        <Input {...field} className={inputCls} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-6 md:col-span-3">
+                <FormField
+                  control={form.control}
+                  name="place_of_birth"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={labelCls}>Naturalidade</FormLabel>
+                      <FormControl>
+                        <Input {...field} className={inputCls} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-6 md:col-span-3">
+                <FormField
+                  control={form.control}
+                  name="gender_identity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={labelCls}>Identidade de Gênero</FormLabel>
+                      <FormControl>
+                        <Input {...field} className={inputCls} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-6 md:col-span-3">
+                <FormField
+                  control={form.control}
+                  name="preferred_language"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={labelCls}>Idioma Preferido</FormLabel>
+                      <FormControl>
+                        <Input {...field} className={inputCls} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-12">
+                <FormField
+                  control={form.control}
+                  name="photo_consent"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                      <FormControl>
+                        <Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} />
+                      </FormControl>
+                      <FormLabel className="text-xs font-semibold text-slate-600">
+                        Consentimento para uso de foto no prontuário e crachá.
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          </div>
 
-              <div className="border-t border-slate-100 pt-2 md:col-span-12 md:flex md:gap-4">
+          {/* Documentação */}
+          <div className="bg-white border border-slate-200 rounded-md shadow-fluent p-6">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 text-[#0F2B45] font-bold text-base">
+              <div className="flex items-center gap-2">
+                <IdentificationBadge size={22} weight="duotone" /> Documentação Civil
+              </div>
+              <span className="rounded border border-blue-100 bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700">
+                Validação: {form.watch("document_validation_method")?.toUpperCase()}
+              </span>
+            </div>
+            <div className="grid grid-cols-12 gap-4">
+              <div className="col-span-12 md:col-span-4">
+                <FormField
+                  control={form.control}
+                  name="cpf"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={labelCls}>CPF</FormLabel>
+                      <FormControl>
+                        <Input {...field} className={`${inputCls} font-mono`} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-6 md:col-span-3">
+                <FormField
+                  control={form.control}
+                  name="rg"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={labelCls}>RG</FormLabel>
+                      <FormControl>
+                        <Input {...field} className={inputCls} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-6 md:col-span-2">
+                <FormField
+                  control={form.control}
+                  name="rg_issuer"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={labelCls}>Órgão</FormLabel>
+                      <FormControl>
+                        <Input {...field} className={inputCls} placeholder="SSP" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-12 md:col-span-3">
+                <FormField
+                  control={form.control}
+                  name="cpf_status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={labelCls}>Status CPF</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className={inputCls}>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="valid">Válido</SelectItem>
+                          <SelectItem value="pending">Pendente</SelectItem>
+                          <SelectItem value="invalid">Inválido</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-12 md:col-span-4">
+                <FormField
+                  control={form.control}
+                  name="cns"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={labelCls}>Cartão SUS (CNS)</FormLabel>
+                      <FormControl>
+                        <Input {...field} className={`${inputCls} font-mono bg-blue-50/30 text-blue-900`} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-6 md:col-span-4">
+                <FormField
+                  control={form.control}
+                  name="national_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={labelCls}>Documento Nacional</FormLabel>
+                      <FormControl>
+                        <Input {...field} className={inputCls} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-6 md:col-span-4">
+                <FormField
+                  control={form.control}
+                  name="document_validation_method"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={labelCls}>Validação</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className={inputCls}>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="manual">Manual</SelectItem>
+                          <SelectItem value="ocr">OCR</SelectItem>
+                          <SelectItem value="api">API Gov</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* COLUNA DIREITA */}
+        <div className="col-span-12 lg:col-span-4 space-y-6">
+          <div className="bg-white border border-slate-200 border-t-4 border-t-emerald-500 rounded-md shadow-fluent p-6">
+            <div className="flex items-center gap-2 mb-4 text-emerald-700 font-bold text-base">
+              <Phone size={22} weight="duotone" /> Canais de Contato
+            </div>
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="mobile_phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className={labelCls}>Celular Principal</FormLabel>
+                    <FormControl>
+                      <Input {...field} className={`${inputCls} font-semibold`} placeholder="(00) 00000-0000" />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="secondary_phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className={labelCls}>Telefone Secundário</FormLabel>
+                    <FormControl>
+                      <Input {...field} className={inputCls} placeholder="(00) 0000-0000" />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className={labelCls}>E-mail</FormLabel>
+                    <FormControl>
+                      <Input {...field} className={inputCls} type="email" />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="pref_contact_method"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className={labelCls}>Preferência de Contato</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className={inputCls}>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="whatsapp">
+                          <WhatsappLogo className="mr-2 inline text-emerald-500" /> WhatsApp
+                        </SelectItem>
+                        <SelectItem value="phone">Ligação</SelectItem>
+                        <SelectItem value="email">E-mail</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+
+              <div className="border-t border-slate-100 pt-3 space-y-2">
                 <FormField
                   control={form.control}
                   name="accept_sms"
@@ -423,7 +499,7 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
                       <FormControl>
                         <Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} />
                       </FormControl>
-                      <FormLabel>Aceita SMS</FormLabel>
+                      <FormLabel className="text-xs text-slate-600">Aceita SMS</FormLabel>
                     </FormItem>
                   )}
                 />
@@ -435,7 +511,7 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
                       <FormControl>
                         <Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} />
                       </FormControl>
-                      <FormLabel>Aceita Email</FormLabel>
+                      <FormLabel className="text-xs text-slate-600">Aceita E-mail</FormLabel>
                     </FormItem>
                   )}
                 />
@@ -448,65 +524,60 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
                         <Checkbox
                           checked={field.value}
                           onCheckedChange={(val) => field.onChange(!!val)}
-                          className="data-[state=checked]:border-red-500 data-[state=checked]:bg-red-500"
+                          className="data-[state=checked]:border-rose-500 data-[state=checked]:bg-rose-500"
                         />
                       </FormControl>
-                      <FormLabel className="font-bold text-red-600">Bloquear Mkt</FormLabel>
+                      <FormLabel className="text-xs text-rose-700 font-semibold">Bloquear Marketing</FormLabel>
                     </FormItem>
                   )}
                 />
               </div>
-            </Section>
+            </div>
           </div>
 
-          <div className="md:col-span-5">
-            <div className="h-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b border-l-4 border-l-[#0F2B45] border-b-slate-200 bg-white px-5 py-3 text-sm font-bold uppercase tracking-wider text-[#0F2B45]">
-                <div className="flex items-center gap-2">
-                  <Gavel size={20} weight="bold" /> <span>Responsável Legal</span>
-                </div>
-              </div>
-              <div className="space-y-4 p-5">
-                {legalGuardian ? (
-                  <>
-                    <div>
-                      <p className="text-lg font-bold text-[#0F2B45]">{legalGuardian.full_name}</p>
-                      <p className="text-sm font-semibold uppercase text-slate-500">{legalGuardian.relation}</p>
-                    </div>
-                    <div className="space-y-2 rounded border border-slate-100 bg-slate-50 p-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Phone className="text-slate-400" /> {legalGuardian.phone}
-                      </div>
-                      <div className="flex items-center gap-2 font-semibold text-emerald-700">
-                        <CheckCircle /> Representante Legal
-                      </div>
-                      {legalGuardian.can_authorize_procedures && (
-                        <div className="flex items-center gap-2 font-semibold text-blue-700">
-                          <CheckCircle /> Pode Autorizar
-                        </div>
-                      )}
-                    </div>
-                    <Button variant="outline" className="w-full text-xs">
-                      Ver Documento da Procuração
-                    </Button>
-                  </>
-                ) : (
-                  <div className="py-8 text-center text-slate-400">
-                    <WarningCircle size={32} className="mx-auto mb-2 opacity-50" />
-                    <p>Nenhum responsável legal cadastrado.</p>
-                    <Button variant="link" className="text-[#D46F5D]">
-                      Adicionar na aba Rede de Apoio
-                    </Button>
-                  </div>
-                )}
-              </div>
+          <div className="bg-white border border-slate-200 rounded-md shadow-fluent p-6">
+            <div className="flex items-center gap-2 mb-4 text-[#0F2B45] font-bold text-base">
+              <Gavel size={22} weight="duotone" /> Responsável Legal
             </div>
+            {legalGuardian ? (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-lg font-bold text-[#0F2B45]">{legalGuardian.full_name}</p>
+                  <p className="text-sm font-semibold uppercase text-slate-500">{legalGuardian.relation}</p>
+                </div>
+                <div className="space-y-2 rounded border border-slate-100 bg-slate-50 p-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Phone className="text-slate-400" /> {legalGuardian.phone}
+                  </div>
+                  <div className="flex items-center gap-2 font-semibold text-emerald-700">
+                    <CheckCircle /> Representante Legal
+                  </div>
+                  {legalGuardian.can_authorize_procedures && (
+                    <div className="flex items-center gap-2 font-semibold text-blue-700">
+                      <CheckCircle /> Pode Autorizar
+                    </div>
+                  )}
+                </div>
+                <Button variant="outline" className="w-full text-xs">
+                  Ver Documento da Procuração
+                </Button>
+              </div>
+            ) : (
+              <div className="py-6 text-center text-slate-400">
+                <WarningCircle size={32} className="mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Nenhum responsável legal cadastrado.</p>
+                <Button variant="link" className="text-[#D46F5D]">
+                  Adicionar na aba Rede de Apoio
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="sticky bottom-4 z-10 flex justify-end">
-          <Button type="submit" className="gap-2 bg-[#D46F5D] text-white shadow-lg hover:bg-[#D46F5D]/90">
-            <FloppyDisk size={18} /> Salvar Alterações
+        {/* BOTÃO FLUTUANTE */}
+        <div className="fixed bottom-6 right-8 shadow-2xl z-50">
+          <Button type="submit" className="bg-[#D46F5D] hover:bg-[#c05846] text-white px-6 py-4 rounded-full font-bold flex items-center gap-2 shadow-lg">
+            <FloppyDisk size={20} weight="bold" /> Salvar Alterações
           </Button>
         </div>
       </form>
