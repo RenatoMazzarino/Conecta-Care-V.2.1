@@ -128,6 +128,7 @@ export type FullPatientDetails = {
   administrative?: PatientAdministrativeDTO[];
   inventory?: PatientInventoryDTO[]; // Note: O DTO pode precisar de ajuste se o 'item' vier aninhado
   documents?: PatientDocumentDTO[];
+  schedule_settings?: any[];
   
   // Dados Extras
   next_shifts?: PatientNextShift[];
@@ -181,6 +182,7 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
       financial:patient_financial_profiles(*),
       clinical:patient_clinical_profiles(*),
       administrative:patient_administrative_profiles(*),
+      schedule_settings:patient_schedule_settings(*),
       documents:patient_documents(*),
       ledger:financial_records(*),
       medications:patient_medications(*)

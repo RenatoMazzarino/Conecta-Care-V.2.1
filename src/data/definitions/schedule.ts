@@ -51,7 +51,8 @@ export type ShiftMonitorDataDTO = z.infer<typeof ShiftMonitorDataZ>;
 export const CreateShiftSchema = z.object({
   patient_id: z.string().uuid({ message: "Selecione um paciente" }),
   professional_id: z.string().uuid().optional(), // Opcional (vaga aberta)
-  date: z.coerce.date(),
+  service_id: z.string().uuid({ message: "Selecione o serviço (ex: Plantão 12h)" }),
+  date: z.date(),
   shift_type: z.enum(['day', 'night']),
 });
 

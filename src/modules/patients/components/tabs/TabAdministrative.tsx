@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Calendar, Briefcase, UserGear, FileText } from "@phosphor-icons/react";
+import { Calendar, Briefcase, UserGear, FileText, Clock, Gear, UsersThree } from "@phosphor-icons/react";
 import { format } from "date-fns";
 
 // --- HELPER DE DATA ---
@@ -26,6 +26,7 @@ export function TabAdministrative({ patient }: { patient: FullPatientDetails }) 
     // Busca os dados administrativos (se existirem) ou inicializa vazio
     // OBS: Lembre-se de atualizar o patient.data.ts para trazer 'administrative'
     const admin = (patient?.administrative as any)?.[0] || {};
+    const schedule = (patient as any).schedule_settings?.[0] || {};
     
     // Busca complexidade do perfil clínico (somente leitura ou edição compartilhada)
     const clinical = (patient.clinical?.[0] as any) || {};
@@ -45,6 +46,13 @@ export function TabAdministrative({ patient }: { patient: FullPatientDetails }) 
             
             technical_supervisor_name: admin.technical_supervisor_name ?? '',
             administrative_contact_name: admin.administrative_contact_name ?? '',
+            
+            scheme_type: schedule.scheme_type ?? '12x36',
+            day_start_time: schedule.day_start_time ? schedule.day_start_time.slice(0, 5) : "07:00",
+            night_start_time: schedule.night_start_time ? schedule.night_start_time.slice(0, 5) : "19:00",
+            professionals_per_shift: schedule.professionals_per_shift ?? 1,
+            required_role: schedule.required_role ?? 'technician',
+            auto_generate: schedule.auto_generate ?? true,
         }
     });
 
@@ -194,6 +202,82 @@ export function TabAdministrative({ patient }: { patient: FullPatientDetails }) 
                                     <FormLabel>Escalista / Concierge</FormLabel>
                                     <FormControl><Input {...field} placeholder="Nome do administrativo" /></FormControl>
                                     <FormMessage />
+                                </FormItem>
+                            )} />
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* 4. REGRAS OPERACIONAIS DE ESCALA */}
+                <Card className="shadow-fluent border-none border-l-4 border-l-emerald-500">
+                    <CardHeader className="border-b border-slate-100 pb-4">
+                        <CardTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[#0F2B45]">
+                            <Gear size={20} /> Regras Operacionais (Escala)
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="md:col-span-1">
+                            <FormField control={form.control} name="scheme_type" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Modelo de Escala</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="12x36">12x36 (Dia sim/não)</SelectItem>
+                                            <SelectItem value="24x48">24x48 (1 dia/2 folga)</SelectItem>
+                                            <SelectItem value="daily_12h">Diário 12h (2 turnos)</SelectItem>
+                                            <SelectItem value="daily_24h">Diário 24h</SelectItem>
+                                            <SelectItem value="custom">Custom</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </FormItem>
+                            )} />
+                        </div>
+
+                        <div className="md:col-span-1">
+                            <FormField control={form.control} name="required_role" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2"><UsersThree size={16} /> Profissional Exigido</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="technician">Técnico Enfermagem</SelectItem>
+                                            <SelectItem value="nurse">Enfermeiro</SelectItem>
+                                            <SelectItem value="caregiver">Cuidador</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </FormItem>
+                            )} />
+                        </div>
+
+                        <div className="md:col-span-1">
+                            <FormField control={form.control} name="professionals_per_shift" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Qtd. Profissionais/Turno</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="number"
+                                            min={1}
+                                            max={5}
+                                            {...field}
+                                            onChange={e => field.onChange(Number(e.target.value))}
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                            )} />
+                        </div>
+
+                        <div className="md:col-span-3 grid grid-cols-2 gap-6 border-t border-slate-100 pt-4">
+                            <FormField control={form.control} name="day_start_time" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2"><Clock size={16}/> Início Diurno</FormLabel>
+                                    <FormControl><Input type="time" {...field} /></FormControl>
+                                </FormItem>
+                            )} />
+                            <FormField control={form.control} name="night_start_time" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2 text-slate-500"><Clock size={16}/> Início Noturno</FormLabel>
+                                    <FormControl><Input type="time" {...field} /></FormControl>
                                 </FormItem>
                             )} />
                         </div>

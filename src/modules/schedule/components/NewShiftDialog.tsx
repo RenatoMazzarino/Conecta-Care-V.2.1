@@ -20,12 +20,14 @@ export function NewShiftDialog() {
   const [open, setOpen] = useState(false);
   const [patients, setPatients] = useState<OptionList>([]);
   const [professionals, setProfessionals] = useState<OptionList>([]);
+  const [services, setServices] = useState<{ id: string; name: string }[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
 
   const form = useForm<CreateShiftDTO>({
     resolver: zodResolver(CreateShiftSchema) as any,
     defaultValues: {
       shift_type: 'day',
+      service_id: '',
     }
   });
 
@@ -41,10 +43,15 @@ export function NewShiftDialog() {
             role: p.role,
           }))
         );
+        setServices(data.services || []);
+
+        if (data.services && data.services.length > 0) {
+          form.setValue('service_id', data.services[0].id);
+        }
         setLoadingOptions(false);
       });
     }
-  }, [open, patients.length]);
+  }, [open, patients.length, form]);
 
   async function onSubmit(data: CreateShiftDTO) {
     const res = await createShiftAction(data);
@@ -52,6 +59,9 @@ export function NewShiftDialog() {
       toast.success("Plantão agendado com sucesso!");
       setOpen(false);
       form.reset();
+      if (services.length > 0) {
+        form.setValue('service_id', services[0].id);
+      }
     } else {
       toast.error("Erro: " + res.error);
     }
@@ -81,6 +91,21 @@ export function NewShiftDialog() {
                   <SelectContent className="bg-white">
                     {patients.map(p => (
                       <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="service_id" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Serviço (Faturamento)</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl><SelectTrigger className="bg-white"><SelectValue placeholder="Selecione o tipo de plantão" /></SelectTrigger></FormControl>
+                  <SelectContent className="bg-white">
+                    {services.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

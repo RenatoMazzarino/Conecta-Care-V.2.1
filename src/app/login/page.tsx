@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import { login } from "./actions";
 
 export default function LoginPage() {
   return (
@@ -13,14 +14,14 @@ export default function LoginPage() {
           <p className="text-slate-500">Use suas credenciais para acessar o painel protegido.</p>
         </div>
 
-        <form className="space-y-4 rounded-xl border bg-white p-6 shadow-sm">
+        <form className="space-y-4 rounded-xl border bg-white p-6 shadow-sm" action={login}>
           <div className="space-y-2">
             <Label htmlFor="email">E-mail</Label>
-            <Input id="email" type="email" placeholder="seu@email.com" />
+            <Input name="email" id="email" type="email" placeholder="seu@email.com" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Senha</Label>
-            <Input id="password" type="password" placeholder="••••••••" />
+            <Input name="password" id="password" type="password" placeholder="••••••••" />
           </div>
           <div className="flex items-center justify-between text-sm">
             <Link href="/login" className="text-[#0F2B45] hover:underline">

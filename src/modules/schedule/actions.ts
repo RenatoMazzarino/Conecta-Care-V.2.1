@@ -51,7 +51,7 @@ export async function getScheduleGrid(startDate: Date, daysToRender: number = 7)
     .from('shifts')
     .select(`
       *,
-      professional:professionals(full_name, role, user_id)
+      professional:professional_profiles(full_name, role, user_id)
     `)
     .gte('start_time', startISO)
     .lt('start_time', endISO);
@@ -164,7 +164,7 @@ export async function getShiftDetails(shiftId: string): Promise<ShiftMonitorData
     .select(`
       *,
       patient:patients(full_name),
-      professional:professionals(full_name, role, user_id),
+      professional:professional_profiles(full_name, role, user_id),
       timeline:shift_timeline_events(*),
       notes:shift_internal_notes(*)
     `)
@@ -236,7 +236,58 @@ export async function createShiftAction(data: CreateShiftDTO) {
 
   if (!parsed.success) return { success: false, error: "Dados inválidos." };
   
-  const { patient_id, professional_id, date, shift_type } = parsed.data;
+  const { patient_id, professional_id, service_id, date, shift_type } = parsed.data;
+
+  // 1. Buscar dados do Paciente (Para pegar a Operadora/Contractor)
+  const { data: patient, error: patientError } = await supabase
+    .from('patients')
+    .select('primary_contractor_id')
+    .eq('id', patient_id)
+    .single();
+
+  if (patientError || !patient?.primary_contractor_id) {
+    return { success: false, error: "Paciente sem operadora/contrato principal definido." };
+  }
+
+  // 2. Buscar dados do Serviço Mestre (Para pegar o nome)
+  const { data: catalogService } = await supabase
+    .from('services')
+    .select('name, default_duration_minutes')
+    .eq('id', service_id)
+    .single();
+
+  if (!catalogService) return { success: false, error: "Serviço do catálogo não encontrado." };
+
+  // 3. Garantir que existe um 'patient_services' (Vínculo de Orçamento)
+  let { data: patientService } = await supabase
+    .from('patient_services')
+    .select('id')
+    .eq('patient_id', patient_id)
+    .eq('service_name', catalogService.name)
+    .maybeSingle();
+
+  if (!patientService) {
+    const { data: newService, error: createServiceError } = await supabase
+      .from('patient_services')
+      .insert({
+        patient_id,
+        contractor_id: patient.primary_contractor_id,
+        service_name: catalogService.name,
+        unit_price: 0,
+        status: 'active'
+      })
+      .select()
+      .single();
+
+    if (createServiceError) {
+       console.error("Erro ao vincular serviço:", createServiceError);
+       return { success: false, error: "Erro ao criar vínculo de serviço: " + createServiceError.message };
+    }
+    patientService = newService;
+  }
+  if (!patientService) {
+    return { success: false, error: "Falha ao obter serviço vinculado ao paciente." };
+  }
 
   const start = new Date(date);
   const end = new Date(date);
@@ -250,9 +301,37 @@ export async function createShiftAction(data: CreateShiftDTO) {
     end.setHours(7, 0, 0, 0);
   }
 
+  // service_id em shifts referencia patient_services.id (FK). Alguns schemas não possuem coluna service_id em patient_services,
+  // então criamos/recuperamos um vínculo mínimo por paciente.
+  let patientServiceId: string | undefined;
+  const { data: existingPs } = await supabase
+    .from('patient_services')
+    .select('id')
+    .eq('patient_id', patient_id)
+    .maybeSingle();
+
+  if (existingPs?.id) {
+    patientServiceId = existingPs.id;
+  } else {
+    const { data: createdPs, error: psError } = await supabase
+      .from('patient_services')
+      .insert({
+        patient_id,
+        unit_price: 0,
+      })
+      .select('id')
+      .single();
+    if (psError || !createdPs) {
+      console.error("Erro ao vincular serviço ao paciente:", psError);
+      return { success: false, error: "Erro ao vincular serviço ao paciente." };
+    }
+    patientServiceId = createdPs.id;
+  }
+
   const { error } = await supabase.from('shifts').insert({
     patient_id,
     professional_id: professional_id || null,
+    service_id: patientService.id,
     start_time: start.toISOString(),
     end_time: end.toISOString(),
     shift_type,
@@ -273,13 +352,15 @@ export async function createShiftAction(data: CreateShiftDTO) {
 export async function getSchedulingOptions() {
   const supabase = await createClient();
   
-  const [patients, professionals] = await Promise.all([
+  const [patients, professionals, services] = await Promise.all([
     supabase.from('patients').select('id, full_name').eq('status', 'active').order('full_name'),
-    supabase.from('professional_profiles').select('user_id, full_name, role').eq('is_active', true).order('full_name')
+    supabase.from('professional_profiles').select('user_id, full_name, role').eq('is_active', true).order('full_name'),
+    supabase.from('services').select('id, name').eq('category', 'shift').eq('is_active', true).order('name')
   ]);
 
   return {
     patients: patients.data || [],
-    professionals: professionals.data || []
+    professionals: professionals.data || [],
+    services: services.data || []
   };
 }

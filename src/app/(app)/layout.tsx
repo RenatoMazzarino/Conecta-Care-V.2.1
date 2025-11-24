@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ReactNode } from "react";
-import { CalendarCheck, ChartPieSlice, CurrencyCircleDollar, Package, UsersThree, UserGear } from "@phosphor-icons/react/dist/ssr";
+import { CalendarCheck, ChartPieSlice, CurrencyCircleDollar, Package, UsersThree, UserGear, Buildings, GearSix } from "@phosphor-icons/react/dist/ssr";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: ChartPieSlice },
@@ -9,6 +9,8 @@ const navItems = [
   { href: "/schedule", label: "Escala", icon: CalendarCheck },
   { href: "/financial", label: "Financeiro", icon: CurrencyCircleDollar },
   { href: "/inventory", label: "Estoque", icon: Package },
+  { href: "/admin/contractors", label: "Operadoras", icon: Buildings },
+  { href: "/admin", label: "Admin", icon: GearSix },
 ];
 
 export default function AppLayout({ children }: { children: ReactNode }) {
