@@ -8,7 +8,16 @@ import { Package, QrCode, Tag, PencilSimple, Archive } from "@phosphor-icons/rea
 export const dynamic = 'force-dynamic';
 
 export default async function InventoryPage() {
-  const items = await getInventoryMasterAction();
+  const items = (await getInventoryMasterAction()) as Array<{
+    id: string;
+    name: string;
+    sku?: string;
+    category: 'equipment' | 'consumable';
+    brand?: string;
+    model?: string;
+    unit_of_measure?: string;
+    total_allocated?: number;
+  }>;
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-8">
@@ -32,7 +41,7 @@ export default async function InventoryPage() {
                     <p>Nenhum item cadastrado no catálogo.</p>
                 </div>
             ) : (
-                items.map((item: any) => (
+                items.map((item) => (
                     <Card key={item.id} className="shadow-sm hover:shadow-md transition-all border-slate-200">
                         <CardContent className="p-4 flex items-center justify-between">
                             <div className="flex items-center gap-4">

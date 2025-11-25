@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidCPF } from "@/lib/validation";
 
 // Enums baseados no negócio (consultados do repo antigo, mas limpos)
 export const GenderEnum = z.enum(["M", "F", "Other"]);
@@ -7,7 +8,13 @@ export const BondEnum = z.enum(['Plano de Saúde', 'Particular', 'Convênio', 'P
 // Schema de Criação (Dados mínimos para abrir prontuário)
 export const CreatePatientSchema = z.object({
   full_name: z.string().min(2, "Nome obrigatório"),
-  cpf: z.string().min(11, "CPF inválido").max(14),
+  cpf: z
+    .string()
+    .min(11, "CPF incompleto")
+    .max(14, "CPF inválido")
+    .refine((val) => isValidCPF(val), {
+      message: "CPF inválido (verifique os números)",
+    }),
   date_of_birth: z.coerce.date().refine(Boolean, "Data obrigatória"),
   gender: GenderEnum,
   
@@ -17,6 +24,10 @@ export const CreatePatientSchema = z.object({
   billing_due_day: z.coerce.number().optional(),
 
   // Endereço
+  zip_code: z.string().min(8, "CEP inválido"),
+  street: z.string().min(2, "Rua obrigatória"),
+  number: z.string().min(1, "Número obrigatório"),
+  neighborhood: z.string().min(2, "Bairro obrigatório"),
   city: z.string().min(2, "Cidade obrigatória"),
   state: z.string().length(2, "UF inválida"),
 });

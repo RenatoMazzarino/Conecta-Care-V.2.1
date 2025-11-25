@@ -8,14 +8,14 @@ import { upsertContractorAction } from "../actions.contractors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Plus, Buildings } from "@phosphor-icons/react";
 
 interface Props {
-  contractor?: any;
+  contractor?: ContractorDTO;
   trigger?: React.ReactNode;
 }
 
@@ -25,7 +25,7 @@ export function ContractorDialog({ contractor, trigger }: Props) {
   const isEditing = !!contractor;
 
   const form = useForm<ContractorDTO>({
-    resolver: zodResolver(ContractorSchema) as any,
+    resolver: zodResolver(ContractorSchema),
     defaultValues: {
       id: contractor?.id,
       name: contractor?.name ?? "",

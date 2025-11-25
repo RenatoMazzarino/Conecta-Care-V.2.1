@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CaretRight } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
 
 const labels: Record<string, string> = {
   dashboard: "Dashboard",

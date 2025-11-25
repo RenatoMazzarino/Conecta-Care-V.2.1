@@ -8,7 +8,6 @@ import {
   CaretLeft as ChevronLeft,
   CaretRight as ChevronRight,
   Moon,
-  Plus,
   Sun,
   UsersThree as Users,
   IconProps,
@@ -371,6 +370,3 @@ export function ScheduleDashboard() {
     </div>
   );
 }
-  function handleNewVacancy() {
-    toast.info("Use um slot aberto na grade para criar uma vaga. Fluxo dedicado de criação em breve.");
-  }

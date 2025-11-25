@@ -42,12 +42,12 @@ export async function createPatientAction(data: CreatePatientDTO) {
     }),
     supabase.from("patient_addresses").insert({
       patient_id: patient.id,
+      zip_code: form.zip_code,
+      street: form.street,
+      number: form.number,
+      neighborhood: form.neighborhood,
       city: form.city,
       state: form.state,
-      street: "Não informado",
-      number: "S/N",
-      neighborhood: "Não informado",
-      zip_code: "00000-000",
     }),
   ]);
 

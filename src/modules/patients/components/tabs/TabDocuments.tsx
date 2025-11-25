@@ -1,4 +1,5 @@
 'use client'
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -6,7 +7,7 @@ import { createDocumentRecordAction, deleteDocumentAction, getDocumentUrlAction 
 import { FullPatientDetails } from "../../patient.data";
 import { 
     FolderSimple, IdentificationBadge, Gavel, CurrencyCircleDollar, Scroll, ShieldCheck, 
-    DotsThreeCircle, UploadSimple, FilePdf, ImageSquare, FileText, Eye, Trash, CheckCircle, WarningCircle,
+    DotsThreeCircle, UploadSimple, FilePdf, ImageSquare, FileText, Trash, CheckCircle, WarningCircle,
     DownloadSimple
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";

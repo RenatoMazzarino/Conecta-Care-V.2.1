@@ -7,7 +7,15 @@ import { Receipt, FilePdf, CheckCircle } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-export function BillingBatchList({ batches }: { batches: any[] }) {
+type BillingBatchCard = {
+  id: string;
+  competence_month: string;
+  contractor?: { name?: string } | null;
+  status: 'open' | 'invoiced' | 'paid' | string;
+  total_amount: number;
+};
+
+export function BillingBatchList({ batches }: { batches: BillingBatchCard[] }) {
   
   const formatCurrency = (val: number) => 
     val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

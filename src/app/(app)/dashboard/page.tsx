@@ -1,9 +1,6 @@
 import { getDashboardKPIsAction } from "./actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  TrendUp, WarningOctagon, ChartPieSlice, 
-  CurrencyDollar, UsersThree, CalendarCheck
-} from "@phosphor-icons/react/dist/ssr";
+import { WarningOctagon, ChartPieSlice, CurrencyDollar, UsersThree, CalendarCheck } from "@phosphor-icons/react/dist/ssr";
 
 export const dynamic = 'force-dynamic';
 

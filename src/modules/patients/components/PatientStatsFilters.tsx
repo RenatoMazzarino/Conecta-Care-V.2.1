@@ -20,9 +20,20 @@ import {
 } from "@phosphor-icons/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ComponentType } from "react";
+
+type StatFilterCardProps = {
+  label: string;
+  count: number;
+  icon: ComponentType<{ weight?: string; className?: string }>;
+  active: boolean;
+  onClick: () => void;
+  colorClass: string;
+  borderClass: string;
+};
 
 // Card KPI estilo Fluent (borda lateral colorida)
-function StatFilterCard({ label, count, icon: Icon, active, onClick, colorClass, borderClass }: any) {
+function StatFilterCard({ label, count, icon: Icon, active, onClick, colorClass, borderClass }: StatFilterCardProps) {
   return (
     <div
       onClick={onClick}
@@ -58,7 +69,13 @@ type PatientStats = {
   financialPending?: number;
 };
 
-export function PatientStatsFilters({ stats, contractors = [] }: { stats: PatientStats; contractors?: any[] }) {
+export function PatientStatsFilters({
+  stats,
+  contractors = [],
+}: {
+  stats: PatientStats;
+  contractors?: Array<{ id: string; name: string }>;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
@@ -196,7 +213,7 @@ export function PatientStatsFilters({ stats, contractors = [] }: { stats: Patien
                 <SelectTrigger className="bg-white h-9"><SelectValue placeholder="Todas" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  {contractors.map((c: any) => (
+                  {contractors.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>

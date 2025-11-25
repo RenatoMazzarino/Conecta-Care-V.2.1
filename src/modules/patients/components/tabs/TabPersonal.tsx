@@ -1,6 +1,7 @@
 'use client';
+/* eslint-disable react-hooks/incompatible-library */
 
-import { Resolver, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PatientPersonalSchema, PatientPersonalDTO } from "@/data/definitions/personal";
 import { upsertPersonalAction } from "../../actions.upsertPersonal";
@@ -8,11 +9,10 @@ import { FullPatientDetails } from "../../patient.data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
-  UserCircle,
   IdentificationBadge,
   Phone,
   Gavel,
@@ -21,44 +21,43 @@ import {
   FloppyDisk,
   WarningCircle,
   IdentificationCard,
-  Files,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
 
 export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
-  const legalGuardian = patient.contacts?.find((c: any) => c.is_legal_representative);
+  const legalGuardian = patient.contacts?.find((c) => c?.is_legal_representative);
 
   const form = useForm<PatientPersonalDTO>({
-    resolver: zodResolver(PatientPersonalSchema) as Resolver<PatientPersonalDTO>,
+    resolver: zodResolver(PatientPersonalSchema),
     defaultValues: {
       patient_id: patient.id,
       full_name: patient.full_name ?? "",
       social_name: patient.social_name ?? "",
-      salutation: (patient as any).salutation ?? "",
-      pronouns: (patient as any).pronouns ?? "",
+      salutation: patient.salutation ?? "",
+      pronouns: patient.pronouns ?? "",
       cpf: patient.cpf ?? "",
-      cpf_status: (patient as any).cpf_status ?? "valid",
+      cpf_status: patient.cpf_status ?? "valid",
       rg: patient.rg ?? "",
       rg_issuer: patient.rg_issuer ?? "",
       cns: patient.cns ?? "",
-      national_id: (patient as any).national_id ?? "",
-      document_validation_method: (patient as any).document_validation_method ?? "manual",
+      national_id: patient.national_id ?? "",
+      document_validation_method: patient.document_validation_method ?? "manual",
       date_of_birth: patient.date_of_birth ? new Date(patient.date_of_birth) : undefined,
-      gender: (patient as any).gender ?? "",
+      gender: patient.gender ?? "Other",
       gender_identity: patient.gender_identity ?? "",
       civil_status: patient.civil_status ?? "",
       nationality: patient.nationality ?? "Brasileira",
       place_of_birth: patient.place_of_birth ?? "",
-      preferred_language: (patient as any).preferred_language ?? "Português",
+      preferred_language: patient.preferred_language ?? "Português",
       mother_name: patient.mother_name ?? "",
-      photo_consent: (patient as any).photo_consent ?? false,
-      mobile_phone: (patient as any).mobile_phone ?? "",
-      secondary_phone: (patient as any).secondary_phone ?? "",
-      email: (patient as any).email ?? "",
-      pref_contact_method: (patient as any).pref_contact_method ?? "whatsapp",
-      accept_sms: (patient as any).accept_sms ?? true,
-      accept_email: (patient as any).accept_email ?? true,
-      block_marketing: (patient as any).block_marketing ?? false,
+      photo_consent: patient.photo_consent ?? false,
+      mobile_phone: patient.mobile_phone ?? "",
+      secondary_phone: patient.secondary_phone ?? "",
+      email: patient.email ?? "",
+      pref_contact_method: patient.pref_contact_method ?? "whatsapp",
+      accept_sms: patient.accept_sms ?? true,
+      accept_email: patient.accept_email ?? true,
+      block_marketing: patient.block_marketing ?? false,
     },
   });
 
@@ -70,6 +69,7 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
 
   const labelCls = "text-xs font-bold uppercase text-slate-500";
   const inputCls = "h-9 text-sm";
+  const validationMethod = (form.watch("document_validation_method") || "").toUpperCase();
 
   return (
     <Form {...form}>
@@ -299,7 +299,7 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
                 <IdentificationBadge size={22} weight="duotone" /> Documentação Civil
               </div>
               <span className="rounded border border-blue-100 bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700">
-                Validação: {form.watch("document_validation_method")?.toUpperCase()}
+                Validação: {validationMethod}
               </span>
             </div>
             <div className="grid grid-cols-12 gap-4">

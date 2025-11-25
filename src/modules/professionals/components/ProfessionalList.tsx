@@ -23,7 +23,20 @@ const roleColors: Record<string, string> = {
   coordinator: "bg-slate-100 text-slate-700 border-slate-200",
 };
 
-export function ProfessionalList({ data }: { data: any[] }) {
+type ProfessionalListItem = {
+  id?: string;
+  user_id?: string;
+  full_name: string;
+  cpf?: string | null;
+  role?: string;
+  professional_license?: string | null;
+  contact_phone?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  is_active?: boolean;
+};
+
+export function ProfessionalList({ data }: { data: ProfessionalListItem[] }) {
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState("all");
 

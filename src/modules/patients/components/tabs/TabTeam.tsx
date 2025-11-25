@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { FullPatientDetails } from "../../patient.data";
-import { upsertTeamMemberAction, deleteTeamMemberAction, upsertContactAction, deleteContactAction } from "../../actions.upsertTeam";
+import { deleteTeamMemberAction, upsertContactAction, deleteContactAction } from "../../actions.upsertTeam";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -13,61 +13,22 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Users, Plus, Trash, Star, Phone, Envelope, CheckCircle, FirstAid } from "@phosphor-icons/react";
+import { EmergencyContactDTO } from "@/data/definitions/team";
 
-// --- COMPONENTES DE UI ---
+type TeamMemberRecord = {
+    id: string;
+    role?: string;
+    is_primary?: boolean;
+    professional?: {
+        full_name?: string | null;
+        contact_phone?: string | null;
+    } | null;
+};
 
-function TeamMemberCard({ member, onDelete }: any) {
-    const initials = member.professional?.full_name?.substring(0, 2)?.toUpperCase() || "??";
-    
-    return (
-        <div className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-slate-300 transition-colors">
-            <div className="flex items-center gap-4">
-                <Avatar className="h-12 w-12 border-2 border-white shadow-sm bg-slate-100">
-                    <AvatarFallback className="text-[#0F2B45] font-bold">{initials}</AvatarFallback>
-                </Avatar>
-                <div>
-                    <p className="font-bold text-[#0F2B45] text-sm flex items-center gap-2">
-                        {member.professional?.full_name}
-                        {member.is_primary && <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-800 px-1.5"><Star weight="fill" className="mr-1"/> Focal</Badge>}
-                    </p>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{member.role}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{member.professional?.contact_phone || "Sem telefone"}</p>
-                </div>
-            </div>
-            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-red-600" onClick={() => onDelete(member.id)}>
-                <Trash />
-            </Button>
-        </div>
-    );
-}
-
-function ContactRow({ contact, onDelete }: any) {
-    return (
-        <div className="flex items-start justify-between p-4 border-b border-slate-100 last:border-0">
-            <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                    <p className="font-semibold text-slate-900">{contact.full_name}</p>
-                    <Badge variant="outline" className="text-[10px] bg-slate-50">{contact.relation}</Badge>
-                    {contact.is_legal_representative && <Badge className="text-[10px] bg-[#0F2B45] hover:bg-[#0F2B45]">Legal</Badge>}
-                </div>
-                <div className="flex items-center gap-4 text-xs text-slate-500">
-                    <span className="flex items-center gap-1"><Phone/> {contact.phone}</span>
-                    {contact.email && <span className="flex items-center gap-1"><Envelope/> {contact.email}</span>}
-                </div>
-                <div className="flex gap-2 mt-2">
-                    {contact.can_authorize_procedures && <span className="text-[10px] flex items-center gap-1 text-emerald-700 bg-emerald-50 px-1.5 rounded border border-emerald-100"><CheckCircle/> Autoriza Proc.</span>}
-                    {contact.can_view_record && <span className="text-[10px] flex items-center gap-1 text-blue-700 bg-blue-50 px-1.5 rounded border border-blue-100"><FirstAid/> Acesso Pront.</span>}
-                </div>
-            </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-500" onClick={() => onDelete(contact.id)}>
-                <Trash size={14} />
-            </Button>
-        </div>
-    );
-}
+type ContactRecord = EmergencyContactDTO & { id?: string };
 
 // --- MODAL DE ADICIONAR CONTATO (SIMPLIFICADO PARA O EXEMPLO) ---
-function AddContactDialog({ patientId, onSave }: any) {
+function AddContactDialog({ patientId, onSave }: { patientId: string; onSave: (data: Partial<EmergencyContactDTO> & { patient_id: string }) => Promise<{ success: boolean; error?: string }> }) {
     const [open, setOpen] = useState(false);
     const [data, setData] = useState({ full_name: '', relation: '', phone: '', is_legal_representative: false });
 
@@ -111,8 +72,8 @@ function AddContactDialog({ patientId, onSave }: any) {
 }
 
 export function TabTeam({ patient }: { patient: FullPatientDetails }) {
-    const contacts = patient.contacts || [];
-    const team = patient.team || []; 
+    const contacts: ContactRecord[] = (patient.contacts as ContactRecord[]) || [];
+    const team: TeamMemberRecord[] = (patient.team as TeamMemberRecord[]) || []; 
 
     const handleDeleteTeam = async (id: string) => {
         if (confirm("Remover este profissional da equipe?")) {
@@ -148,7 +109,7 @@ export function TabTeam({ patient }: { patient: FullPatientDetails }) {
                                 <p className="text-xs">Inclua enfermeiros, técnicos ou médicos fixos.</p>
                             </div>
                         ) : (
-                            team.map((member: any) => (
+                            team.map((member) => (
                                 <div key={member.id} className="flex items-center justify-between px-3 py-3 rounded-md border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition">
                                     <div className="flex items-center gap-3">
                                         <Avatar className="h-10 w-10 border-2 border-white shadow-sm bg-slate-100">
@@ -192,8 +153,8 @@ export function TabTeam({ patient }: { patient: FullPatientDetails }) {
                             <p className="text-center py-8 text-slate-400">Nenhum contato cadastrado.</p>
                         ) : (
                             <div className="divide-y divide-slate-100">
-                                {contacts.map((contact: any) => (
-                                    <div key={contact.id} className="flex items-start justify-between px-4 py-3 hover:bg-slate-50 transition">
+                                {contacts.map((contact) => (
+                                    <div key={contact.id || contact.full_name} className="flex items-start justify-between px-4 py-3 hover:bg-slate-50 transition">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <p className="font-semibold text-slate-900">{contact.full_name}</p>

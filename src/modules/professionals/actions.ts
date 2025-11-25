@@ -40,7 +40,7 @@ export async function upsertProfessionalAction(data: ProfessionalDTO) {
 
   const { error } = await supabase
     .from('professional_profiles')
-    .upsert(payload as any); // Cast simples pois o user_id pode ser opcional
+    .upsert(payload);
 
   if (error) return { success: false, error: error.message };
 

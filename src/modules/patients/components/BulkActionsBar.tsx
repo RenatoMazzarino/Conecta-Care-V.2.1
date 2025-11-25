@@ -6,9 +6,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Users, Trash, Prohibit, X, UserPlus } from "@phosphor-icons/react";
+import { Trash, Prohibit, X, UserPlus } from "@phosphor-icons/react";
 import { bulkDeletePatientsAction, bulkInactivatePatientsAction, bulkAssignTeamMemberAction } from "../actions.bulk";
 import { getProfessionalsAction } from "@/modules/professionals/actions";
+import { ProfessionalDTO } from "@/data/definitions/professional";
 
 interface BulkActionsBarProps {
   selectedIds: string[];
@@ -17,7 +18,7 @@ interface BulkActionsBarProps {
 
 export function BulkActionsBar({ selectedIds, onClearSelection }: BulkActionsBarProps) {
   const [isAssignOpen, setIsAssignOpen] = useState(false);
-  const [professionals, setProfessionals] = useState<any[]>([]);
+  const [professionals, setProfessionals] = useState<Array<ProfessionalDTO & { user_id: string }>>([]);
   const [loading, setLoading] = useState(false);
 
   const [selectedRole, setSelectedRole] = useState("");

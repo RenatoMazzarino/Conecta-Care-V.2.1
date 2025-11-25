@@ -16,8 +16,8 @@ import { Plus, UserPlus } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 
 interface Props {
-  professional?: any; // Se passar, é edição
-  trigger?: React.ReactNode; // Botão customizado
+  professional?: Partial<ProfessionalDTO> & { id?: string; contact_phone?: string | null };
+  trigger?: React.ReactNode;
 }
 
 export function ProfessionalFormDialog({ professional, trigger }: Props) {
@@ -27,7 +27,7 @@ export function ProfessionalFormDialog({ professional, trigger }: Props) {
   const isEditing = !!professional;
 
   const form = useForm<ProfessionalDTO>({
-    resolver: zodResolver(ProfessionalSchema) as any,
+    resolver: zodResolver(ProfessionalSchema),
     defaultValues: {
       // Se for edição, preenche. Se não, vazio.
       user_id: professional?.user_id, 
@@ -55,7 +55,7 @@ export function ProfessionalFormDialog({ professional, trigger }: Props) {
       } else {
         toast.error("Erro: " + (res.error || "Falha ao salvar"));
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Erro ao salvar profissional:", err);
       toast.error("Erro inesperado ao salvar.");
     } finally {

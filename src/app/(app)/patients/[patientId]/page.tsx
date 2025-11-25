@@ -17,12 +17,8 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-interface PatientDetailsPageProps {
-  params: Promise<{ patientId: string }>;
-}
-
-export default async function PatientDetailsPage({ params }: PatientDetailsPageProps) {
-  const { patientId } = await params;
+export default async function PatientDetailsPage({ params }: { params: { patientId: string } }) {
+  const { patientId } = params;
   const patient = await getPatientDetails(patientId);
 
   if (!patient) return notFound();
@@ -31,8 +27,8 @@ export default async function PatientDetailsPage({ params }: PatientDetailsPageP
   const birth = patient.date_of_birth ? new Date(patient.date_of_birth) : null;
   const age = birth ? new Date().getFullYear() - birth.getFullYear() : "N/D";
   const contractorName = Array.isArray(patient.contractor)
-    ? (patient.contractor as any)[0]?.name || "Particular"
-    : (patient as any)?.contractor?.name || "Particular";
+    ? patient.contractor[0]?.name || "Particular"
+    : patient.contractor?.name || "Particular";
   const complexity = patient.clinical?.[0]?.complexity_level;
   const isHighComplexity = complexity === "high" || complexity === "critical";
 

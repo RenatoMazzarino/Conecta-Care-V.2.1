@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FirstAidKit, PencilSimple, Trash, Clock } from "@phosphor-icons/react/dist/ssr";
+import { ServiceDTO } from "@/data/definitions/service";
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ const categoryColors: Record<string, string> = {
 };
 
 export default async function ServicesPage() {
-  const services = await getServicesAction();
+  const services = (await getServicesAction()) as ServiceDTO[];
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-8">
@@ -34,7 +35,7 @@ export default async function ServicesPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {services.map((item: any) => (
+            {services.map((item) => (
                 <Card key={item.id} className="shadow-sm hover:shadow-md transition-shadow border-slate-200">
                     <CardHeader className="pb-2 flex flex-row items-start justify-between">
                         <div className="flex items-center gap-3">
@@ -82,7 +83,7 @@ export default async function ServicesPage() {
             {services.length === 0 && (
                 <div className="col-span-full text-center py-12 text-slate-400 border-2 border-dashed border-slate-200 rounded-lg bg-slate-50/50">
                     <p>Nenhum serviço cadastrado.</p>
-                    <p className="text-xs">Clique em "Novo Serviço" para começar.</p>
+                    <p className="text-xs">Clique em &apos;Novo Serviço&apos; para começar.</p>
                 </div>
             )}
         </div>

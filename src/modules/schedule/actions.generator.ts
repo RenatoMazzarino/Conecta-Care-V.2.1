@@ -78,7 +78,14 @@ export async function generateMonthlyScheduleAction(patientId: string, year: num
   const endDate = endOfMonth(startDate);
   const days = eachDayOfInterval({ start: startDate, end: endDate });
 
-  const shiftsToCreate: any[] = [];
+  const shiftsToCreate: Array<{
+    patient_id: string;
+    service_id: string;
+    start_time: string;
+    end_time: string;
+    shift_type: 'day' | 'night';
+    status: string;
+  }> = [];
 
   // Exemplo simplificado (Expanda para 12x36 real depois)
   days.forEach(day => {

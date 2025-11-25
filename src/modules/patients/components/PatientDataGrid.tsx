@@ -20,26 +20,19 @@ import {
   UserPlus,
   Prohibit
 } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
 import { bulkAssignTeamMemberAction, bulkDeletePatientsAction, bulkInactivatePatientsAction } from "../actions.bulk";
 import { getProfessionalsAction } from "@/modules/professionals/actions";
-import { useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { ProfessionalDTO } from "@/data/definitions/professional";
+import { cn } from "@/lib/utils";
 
 const complexityBadges: Record<string, { label: string; bg: string; text: string; border: string }> = {
   low: { label: 'Baixa', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-100' },
   medium: { label: 'Média', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-100' },
   high: { label: 'Alta', bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-100' },
   critical: { label: 'Crítica', bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-100' },
-};
-
-const statusDotColor: Record<string, string> = {
-  active: "bg-emerald-500",
-  inactive: "bg-slate-400",
-  hospitalized: "bg-purple-500",
-  deceased: "bg-stone-500"
 };
 
 type GridProps = {
@@ -55,7 +48,7 @@ export function PatientDataGrid({ data, currentPage = 1, totalPages = 1, totalCo
   const getInitials = (name: string) => name.substring(0, 2).toUpperCase();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [assignOpen, setAssignOpen] = useState(false);
-  const [professionals, setProfessionals] = useState<any[]>([]);
+  const [professionals, setProfessionals] = useState<Array<ProfessionalDTO & { user_id: string }>>([]);
   const [selectedProf, setSelectedProf] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const [loadingAction, setLoadingAction] = useState(false);
@@ -79,7 +72,7 @@ export function PatientDataGrid({ data, currentPage = 1, totalPages = 1, totalCo
   const loadProfessionals = async () => {
     if (professionals.length === 0) {
       const data = await getProfessionalsAction();
-      setProfessionals(data || []);
+      setProfessionals((data || []) as Array<ProfessionalDTO & { user_id: string }>);
     }
   };
 

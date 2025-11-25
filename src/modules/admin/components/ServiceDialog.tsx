@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { Plus, FirstAidKit } from "@phosphor-icons/react";
 
 interface Props {
-  service?: any;
+  service?: ServiceDTO;
   trigger?: React.ReactNode;
 }
 
@@ -33,7 +33,7 @@ export function ServiceDialog({ service, trigger }: Props) {
   const isEditing = !!service;
 
   const form = useForm<ServiceDTO>({
-    resolver: zodResolver(ServiceSchema) as any,
+    resolver: zodResolver(ServiceSchema),
     defaultValues: {
       id: service?.id,
       name: service?.name ?? "",

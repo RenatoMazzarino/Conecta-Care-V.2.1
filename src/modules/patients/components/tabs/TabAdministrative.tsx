@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Calendar, Briefcase, UserGear, FileText, Clock, Gear, UsersThree, ClipboardText, ShieldCheck } from "@phosphor-icons/react";
+import { Calendar, FileText, Clock, Gear, UsersThree, ShieldCheck } from "@phosphor-icons/react";
 import { format } from "date-fns";
 
 // --- HELPER DE DATA ---
@@ -26,14 +26,14 @@ const dateToInput = (d?: Date | string | null) => {
 export function TabAdministrative({ patient }: { patient: FullPatientDetails }) {
     // Busca os dados administrativos (se existirem) ou inicializa vazio
     // OBS: Lembre-se de atualizar o patient.data.ts para trazer 'administrative'
-    const admin = (patient?.administrative as any)?.[0] || {};
-    const schedule = (patient as any).schedule_settings?.[0] || {};
+    const admin = patient?.administrative?.[0] || {};
+    const schedule = patient.schedule_settings?.[0] || {};
     
     // Busca complexidade do perfil clínico (somente leitura ou edição compartilhada)
-    const clinical = (patient.clinical?.[0] as any) || {};
+    const clinical = patient.clinical?.[0] || {};
 
     const form = useForm<PatientAdministrativeDTO>({
-        resolver: zodResolver(PatientAdministrativeSchema) as any,
+        resolver: zodResolver(PatientAdministrativeSchema),
         defaultValues: {
             patient_id: patient.id,
             admission_date: admin.admission_date ? new Date(admin.admission_date) : undefined,

@@ -24,7 +24,7 @@ export function NewShiftDialog() {
   const [loadingOptions, setLoadingOptions] = useState(false);
 
   const form = useForm<CreateShiftDTO>({
-    resolver: zodResolver(CreateShiftSchema) as any,
+    resolver: zodResolver(CreateShiftSchema),
     defaultValues: {
       shift_type: 'day',
       service_id: '',
@@ -33,12 +33,14 @@ export function NewShiftDialog() {
 
   useEffect(() => {
     if (open && patients.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoadingOptions(true);
       getSchedulingOptions().then(data => {
         setPatients(data.patients);
+        const professionalsData = (data.professionals || []) as Array<{ id?: string; user_id?: string; full_name: string; role?: string }>;
         setProfessionals(
-          (data.professionals || []).map((p: any) => ({
-            id: p.user_id ?? p.id,
+          professionalsData.map((p) => ({
+            id: p.user_id ?? p.id ?? "",
             full_name: p.full_name,
             role: p.role,
           }))

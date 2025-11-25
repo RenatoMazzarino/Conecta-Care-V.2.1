@@ -17,11 +17,22 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Package, Plus, Trash, QrCode, Tag, Calendar, ArrowUUpLeft } from "@phosphor-icons/react";
+import { Package, Plus, Trash, QrCode, Tag, ArrowUUpLeft } from "@phosphor-icons/react";
 import { format } from "date-fns";
 
 // --- DIALOG DE ADICIONAR ITEM ---
-function AddItemDialog({ patientId, masterItems, onSave }: any) {
+type AddItemDialogProps = {
+    patientId: string;
+    masterItems: MasterItemSelect[];
+    onSave: (data: PatientInventoryDTO) => Promise<void>;
+};
+
+type InventoryRecord = PatientInventoryDTO & {
+    id: string;
+    item?: { category?: string; name?: string };
+};
+
+function AddItemDialog({ patientId, masterItems, onSave }: AddItemDialogProps) {
     const [open, setOpen] = useState(false);
     const [selectedItemId, setSelectedItemId] = useState("");
     const [qty, setQty] = useState(1);
@@ -29,7 +40,7 @@ function AddItemDialog({ patientId, masterItems, onSave }: any) {
     const [note, setNote] = useState("");
 
     // Encontra o item selecionado para saber se é rastreável (equipment)
-    const selectedMaster = masterItems.find((i: any) => i.id === selectedItemId);
+    const selectedMaster = masterItems.find((i) => i.id === selectedItemId);
     const isTrackable = selectedMaster?.is_trackable;
 
     const handleSave = async () => {
@@ -67,7 +78,7 @@ function AddItemDialog({ patientId, masterItems, onSave }: any) {
                         <Select onValueChange={setSelectedItemId} value={selectedItemId}>
                             <SelectTrigger><SelectValue placeholder="Buscar no catálogo..." /></SelectTrigger>
                             <SelectContent>
-                                {masterItems.map((item: any) => (
+                                {masterItems.map((item) => (
                                     <SelectItem key={item.id} value={item.id}>
                                         {item.name} {item.brand ? `(${item.brand})` : ''}
                                     </SelectItem>
@@ -103,7 +114,7 @@ function AddItemDialog({ patientId, masterItems, onSave }: any) {
 }
 
 export function TabInventory({ patient }: { patient: FullPatientDetails }) {
-    const inventory = (patient as any).inventory || [];
+    const inventory = (patient.inventory as InventoryRecord[] | undefined) || [];
     const [masterItems, setMasterItems] = useState<MasterItemSelect[]>([]);
 
     // Carrega o catálogo mestre ao montar a aba
@@ -152,7 +163,7 @@ export function TabInventory({ patient }: { patient: FullPatientDetails }) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {inventory.map((record: any) => (
+                                    {inventory.map((record) => (
                                         <tr key={record.id} className="border-b border-slate-50 hover:bg-slate-50/70">
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-3">

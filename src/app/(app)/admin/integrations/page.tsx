@@ -1,4 +1,5 @@
 import { getIntegrationsAction } from "@/modules/admin/actions.integrations";
+import { IntegrationConfigDTO } from "@/data/definitions/integration";
 import { IntegrationDialog } from "@/modules/admin/components/IntegrationDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,7 @@ const providerColors: Record<string, string> = {
 };
 
 export default async function IntegrationsPage() {
-  const integrations = await getIntegrationsAction();
+  const integrations = (await getIntegrationsAction()) as Array<IntegrationConfigDTO & { id: string; api_key?: string }>;
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-8">
@@ -33,7 +34,7 @@ export default async function IntegrationsPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {integrations.map((item: any) => (
+            {integrations.map((item) => (
                 <Card key={item.id} className="shadow-sm border-slate-200 relative overflow-hidden">
                     <div className={`absolute top-0 left-0 right-0 h-1 ${item.environment === 'production' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
                     

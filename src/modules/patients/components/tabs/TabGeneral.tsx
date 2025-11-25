@@ -1,6 +1,6 @@
 'use client';
 
-import { FullPatientDetails } from "../../patient.data";
+import { FullPatientDetails, PatientNextShift } from "../../patient.data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,19 +18,19 @@ import {
   CalendarCheck,
   CalendarX
 } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { EmergencyContactDTO } from "@/data/definitions/team";
 
 export function TabGeneral({ patient }: { patient: FullPatientDetails }) {
-  const clinical = (patient.clinical?.[0] as any) || {};
+  const clinical = patient.clinical?.[0] || {};
   const address = patient.address?.[0] || {};
-  const domicile = (patient as any)?.domicile?.[0] || {};
-  const contacts = patient.contacts || [];
-  const nextShifts = (patient as any)?.next_shifts || [];
+  const domicile = patient.domicile?.[0] || {};
+  const contacts: EmergencyContactDTO[] = patient.contacts || [];
+  const nextShifts: PatientNextShift[] = patient.next_shifts || [];
 
   const riskLevel = clinical.complexity_level === "critical" || clinical.complexity_level === "high";
-  const guardian = contacts.find((c: any) => c.is_legal_representative);
+  const guardian = contacts.find((c) => c.is_legal_representative);
 
   return (
     <div className="grid grid-cols-12 gap-6 pb-10">
@@ -219,9 +219,9 @@ export function TabGeneral({ patient }: { patient: FullPatientDetails }) {
             <div className="space-y-3">
               <p className="text-[10px] font-bold uppercase text-slate-500">Contatos de Emergência</p>
               {contacts
-                .filter((c: any) => !c.is_legal_representative)
+                .filter((c) => !c.is_legal_representative)
                 .slice(0, 3)
-                .map((c: any) => (
+                .map((c) => (
                   <div
                     key={c.id}
                     className="flex justify-between items-center text-sm p-2 hover:bg-slate-50 rounded transition cursor-default border border-transparent hover:border-slate-100"
@@ -265,7 +265,7 @@ export function TabGeneral({ patient }: { patient: FullPatientDetails }) {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {nextShifts.slice(0, 5).map((shift: any) => {
+                {nextShifts.slice(0, 5).map((shift) => {
                   const date = new Date(shift.start_time);
                   return (
                     <div

@@ -20,7 +20,7 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
     
     // Tipagem segura para acessar as relações que adicionamos no patient.data.ts
     // (Assumindo que você atualizou o select lá para trazer domicile e household)
-    const domicile = (patient as any)?.domicile?.[0] || {};
+    const domicile = patient?.domicile?.[0] || {};
     
     const form = useForm<PatientAddressDTO>({
         resolver: zodResolver(PatientAddressSchema) as Resolver<PatientAddressDTO>,

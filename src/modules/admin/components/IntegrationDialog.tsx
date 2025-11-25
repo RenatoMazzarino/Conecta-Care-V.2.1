@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { PlugsConnected, Key } from "@phosphor-icons/react";
 
 interface Props {
-  config?: any;
+  config?: IntegrationConfigDTO;
   trigger?: React.ReactNode;
 }
 
@@ -32,7 +32,7 @@ export function IntegrationDialog({ config, trigger }: Props) {
   const isEditing = !!config;
 
   const form = useForm<IntegrationConfigDTO>({
-    resolver: zodResolver(IntegrationConfigSchema) as any,
+    resolver: zodResolver(IntegrationConfigSchema),
     defaultValues: {
       id: config?.id,
       provider: config?.provider ?? 'conta_azul',

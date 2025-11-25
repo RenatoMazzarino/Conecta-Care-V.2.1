@@ -1,4 +1,4 @@
-import { getContractorsAction, deleteContractorAction } from "@/modules/admin/actions.contractors";
+import { getContractorsAction } from "@/modules/admin/actions.contractors";
 import { ContractorDialog } from "@/modules/admin/components/ContractorDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,14 @@ import { Buildings, PencilSimple, Trash } from "@phosphor-icons/react/dist/ssr";
 export const dynamic = 'force-dynamic';
 
 export default async function ContractorsPage() {
-  const contractors = await getContractorsAction();
+  const contractors = (await getContractorsAction()) as Array<{
+    id: string;
+    name: string;
+    document_number: string;
+    type: string;
+    billing_due_days?: number;
+    is_active?: boolean;
+  }>;
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-8">
@@ -26,7 +33,7 @@ export default async function ContractorsPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {contractors.map((item: any) => (
+            {contractors.map((item) => (
                 <Card key={item.id} className="shadow-sm hover:shadow-md transition-shadow border-slate-200">
                     <CardHeader className="pb-2 flex flex-row items-start justify-between">
                         <div className="flex items-center gap-3">

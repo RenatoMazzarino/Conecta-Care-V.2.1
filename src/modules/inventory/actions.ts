@@ -15,6 +15,19 @@ type InventoryItemInput = {
   min_stock_level: number;
 };
 
+type InventoryRecord = {
+  id: string;
+  name: string;
+  sku?: string;
+  category: 'equipment' | 'consumable';
+  brand?: string;
+  model?: string;
+  unit_of_measure?: string;
+  is_trackable?: boolean;
+  min_stock_level?: number;
+  allocations?: Array<{ current_quantity?: number }>;
+};
+
 export async function getInventoryMasterAction() {
   const supabase = await createClient();
   
@@ -31,9 +44,9 @@ export async function getInventoryMasterAction() {
     return [];
   }
 
-  return data.map((item: any) => ({
+  return data.map((item: InventoryRecord) => ({
     ...item,
-    total_allocated: (item.allocations || []).reduce((acc: number, curr: any) => acc + (curr.current_quantity || 0), 0)
+    total_allocated: (item.allocations || []).reduce((acc, curr) => acc + (curr.current_quantity || 0), 0)
   }));
 }
 

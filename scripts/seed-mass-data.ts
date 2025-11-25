@@ -17,11 +17,29 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // --- DADOS MOCK ---
 const FIRST_NAMES = ['Ana', 'Carlos', 'Beatriz', 'João', 'Maria', 'Pedro', 'Lucia', 'Roberto', 'Fernanda', 'Paulo'];
 const LAST_NAMES = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Almeida', 'Pereira', 'Lima', 'Gomes'];
-const STREETS = ['Rua das Flores', 'Av. Paulista', 'Rua Augusta', 'Alameda Santos', 'Rua Oscar Freire'];
-const NEIGHBORHOODS = ['Centro', 'Jardins', 'Bela Vista', 'Pinheiros', 'Vila Madalena'];
-
-const getRandom = (arr: any[]) => arr[Math.floor(Math.random() * arr.length)];
+const getRandom = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const getRandomDate = (start: Date, end: Date) => new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+
+type ServiceRecord = {
+  id?: string;
+  name: string;
+  code?: string;
+  category?: string;
+  default_duration_minutes?: number;
+  unit_measure?: string;
+};
+
+type ContractorRecord = {
+  id: string;
+  name?: string;
+  type?: string;
+  document_number?: string;
+};
+
+type ProfessionalRecord = {
+  id?: string;
+  user_id?: string;
+};
 
 async function seedMaster() {
   console.log('🚀 INICIANDO POPULAÇÃO DE CENÁRIOS REAIS...');
@@ -34,19 +52,19 @@ async function seedMaster() {
     { name: 'Visita Médica', code: 'VIS-MED', category: 'visit', default_duration_minutes: 60, unit_measure: 'visita' },
   ];
   
-  const services: any[] = [];
+  const services: ServiceRecord[] = [];
   for (const s of servicesData) {
     const { data, error } = await supabase.from('services').insert(s).select().single();
     if (error) {
       if (error.code === '23505') {
         const { data: existing } = await supabase.from('services').select('*').eq('code', s.code).maybeSingle();
-        if (existing) services.push(existing);
+        if (existing) services.push(existing as ServiceRecord);
       } else {
         console.error("Erro ao criar serviço:", error);
       }
       continue;
     }
-    if (data) services.push(data);
+    if (data) services.push(data as ServiceRecord);
   }
 
   // 2. OPERADORAS
@@ -56,24 +74,24 @@ async function seedMaster() {
     { name: 'Particular (Família)', type: 'private_individual', document_number: '000.000.000-00' }
   ];
   
-  const contractors: any[] = [];
+  const contractors: ContractorRecord[] = [];
   for (const c of contractorsData) {
     const { data, error } = await supabase.from('contractors').insert({ ...c, is_active: true }).select().single();
     if (error) {
       if (error.code === '23505') {
         const { data: existing } = await supabase.from('contractors').select('*').eq('document_number', c.document_number).maybeSingle();
-        if (existing) contractors.push(existing);
+        if (existing) contractors.push(existing as ContractorRecord);
       } else {
         console.error("Erro ao criar operadora:", error);
       }
       continue;
     }
-    if (data) contractors.push(data);
+    if (data) contractors.push(data as ContractorRecord);
   }
 
   // 3. PROFISSIONAIS
   console.log('👩‍⚕️ Criando/Atualizando Equipe...');
-  const professionals: any[] = [];
+  const professionals: ProfessionalRecord[] = [];
   const roles = ['nurse', 'technician', 'caregiver'];
   
   for (let i = 0; i < 8; i++) {
@@ -97,7 +115,7 @@ async function seedMaster() {
       }
       continue;
     }
-    if (data) professionals.push(data);
+    if (data) professionals.push(data as ProfessionalRecord);
   }
 
   // 4. PACIENTES E PLANTÕES (A Grande Massa)
@@ -131,7 +149,8 @@ async function seedMaster() {
 
     // 4.2 Garante Vínculo de Serviço (Orçamento)
     // Necessário para criar plantões
-    const service = getRandom(services.filter((s:any) => s.category === 'shift'));
+    const shiftServices = services.filter((s) => s.category === 'shift');
+    const service = getRandom(shiftServices);
     let { data: patientService } = await supabase.from('patient_services')
         .select('id')
         .eq('patient_id', patient.id)
@@ -165,7 +184,8 @@ async function seedMaster() {
         
         // Lógica de Estado (CENÁRIOS)
         let status = 'scheduled';
-        let professionalId = getRandom(professionals).user_id; // Padrão: tem profissional
+        const randomProfessional = getRandom(professionals);
+        const professionalId = randomProfessional.user_id || randomProfessional.id; // Padrão: tem profissional
         let checkIn = null;
         let checkOut = null;
 

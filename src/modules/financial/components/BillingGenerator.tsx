@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { BillingBatchSchema, BillingBatchDTO } from "@/data/definitions/billing";
 import { generateBillingBatchAction } from "../actions";
 import { getContractorsAction } from "../../admin/actions.contractors";
+import { ContractorDTO } from "@/data/definitions/contractor";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
@@ -16,10 +17,10 @@ import { HandCoins, Spinner } from "@phosphor-icons/react";
 export function BillingGenerator() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [contractors, setContractors] = useState<any[]>([]);
+  const [contractors, setContractors] = useState<ContractorDTO[]>([]);
 
   const form = useForm<BillingBatchDTO>({
-    resolver: zodResolver(BillingBatchSchema) as any,
+    resolver: zodResolver(BillingBatchSchema),
   });
 
   useEffect(() => {

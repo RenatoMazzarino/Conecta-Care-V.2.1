@@ -12,8 +12,20 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Package, Plus } from "@phosphor-icons/react";
 
+type InventoryFormData = {
+  id?: string;
+  name: string;
+  sku?: string;
+  category: "equipment" | "consumable";
+  brand?: string;
+  model?: string;
+  unit_of_measure?: string;
+  is_trackable: boolean;
+  min_stock_level: number;
+};
+
 interface Props {
-  item?: any;
+  item?: InventoryFormData;
   trigger?: React.ReactNode;
 }
 
@@ -22,7 +34,7 @@ export function InventoryMasterDialog({ item, trigger }: Props) {
   const [loading, setLoading] = useState(false);
   const isEditing = !!item;
 
-  const { register, handleSubmit, setValue, watch, reset } = useForm({
+  const { register, handleSubmit, setValue, watch, reset } = useForm<InventoryFormData>({
     defaultValues: {
       id: item?.id,
       name: item?.name ?? "",
@@ -36,9 +48,10 @@ export function InventoryMasterDialog({ item, trigger }: Props) {
     }
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const category = watch('category');
 
-  async function onSubmit(data: any) {
+  async function onSubmit(data: InventoryFormData) {
     setLoading(true);
     const res = await upsertInventoryItemAction(data);
     setLoading(false);
@@ -86,7 +99,7 @@ export function InventoryMasterDialog({ item, trigger }: Props) {
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                     <Label>Categoria</Label>
-                    <Select onValueChange={(v) => setValue('category', v as any)} defaultValue={category}>
+                    <Select onValueChange={(v) => setValue('category', v as InventoryFormData['category'])} defaultValue={category}>
                         <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
                         <SelectContent className="bg-white">
                             <SelectItem value="equipment">Equipamento (Ativo)</SelectItem>

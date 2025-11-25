@@ -18,8 +18,16 @@ import {
 import { DotsThreeVertical, PencilSimple, FileText } from "@phosphor-icons/react/dist/ssr"; // Ícones Server-Side
 import Link from "next/link";
 
+type PatientListItem = {
+  id: string;
+  full_name: string;
+  cpf?: string | null;
+  date_of_birth?: string | null;
+  status?: string | null;
+};
+
 interface PatientListProps {
-  data: any[]; // Tiparemos melhor depois com o retorno do Supabase
+  data: PatientListItem[];
 }
 
 export function PatientList({ data }: PatientListProps) {

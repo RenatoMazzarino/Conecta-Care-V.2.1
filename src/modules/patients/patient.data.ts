@@ -129,7 +129,7 @@ export type FullPatientDetails = {
   administrative?: PatientAdministrativeDTO[];
   inventory?: PatientInventoryDTO[]; // Note: O DTO pode precisar de ajuste se o 'item' vier aninhado
   documents?: PatientDocumentDTO[];
-  schedule_settings?: any[];
+  schedule_settings?: unknown[];
   
   // Dados Extras
   next_shifts?: PatientNextShift[];
@@ -192,6 +192,28 @@ export type GetPatientsParams = {
   riskMorseMin?: number;
   riskMorseMax?: number;
   oxygenUsage?: string;
+};
+
+type GridPatientRow = {
+  id: string;
+  full_name: string;
+  social_name?: string | null;
+  date_of_birth?: string | null;
+  gender?: string | null;
+  status?: string | null;
+  address?: PatientAddressRecord[];
+  clinical?: Array<{
+    complexity_level?: "low" | "medium" | "high" | "critical" | null;
+    diagnosis_main?: string | null;
+    clinical_tags?: string[];
+    risk_braden?: number | null;
+    risk_morse?: number | null;
+    oxygen_usage?: boolean | null;
+  }>;
+  contractor?: { name?: string | null } | null;
+  financial?: Array<{ billing_status?: string | null; bond_type?: string | null; payment_method?: string | null }>;
+  administrative?: Array<{ admission_type?: string | null; technical_supervisor_name?: string | null; contract_status?: string | null }>;
+  shifts?: Array<{ start_time: string; professional_id?: string | null }>;
 };
 
 // --- FUNÇÕES DE BUSCA ---
@@ -363,13 +385,13 @@ export async function getPatientsPaginated(params: GetPatientsParams = {}) {
 
   const now = new Date();
 
-  let formatted: PatientGridItem[] = (data || []).map((p: any) => {
+  const formatted: PatientGridItem[] = (data || []).map((p: GridPatientRow) => {
     const birth = p.date_of_birth ? new Date(p.date_of_birth) : null;
     const age = birth ? now.getFullYear() - birth.getFullYear() - (now < addDays(new Date(now.getFullYear(), birth.getMonth(), birth.getDate()), 0) ? 1 : 0) : null;
 
     // Próximo plantão simples: menor start_time futuro na lista (já que não ordenamos no select)
-    const futureShifts = (p.shifts || []).filter((s: any) => new Date(s.start_time) >= now);
-    const nextShiftData = futureShifts.sort((a: any, b: any) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())[0];
+    const futureShifts = (p.shifts || []).filter((s) => new Date(s.start_time) >= now);
+    const nextShiftData = futureShifts.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())[0];
     const nextShift = nextShiftData
       ? {
           date: nextShiftData.start_time,
@@ -466,8 +488,9 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
     .select("*")
     .eq("patient_id", patientId);
 
-  let inventory = inventoryRows ?? [];
-  const itemIds = Array.from(new Set(inventory.map((row: any) => row.item_id).filter(Boolean)));
+  type InventoryRow = PatientInventoryDTO & { id: string; item_id?: string | null; item?: { id: string; name?: string; category?: string; is_trackable?: boolean | null; brand?: string | null } | null };
+  let inventory: InventoryRow[] = (inventoryRows as InventoryRow[] | null) ?? [];
+  const itemIds = Array.from(new Set(inventory.map((row) => row.item_id).filter(Boolean)));
   if (itemIds.length > 0) {
     const { data: masterItems } = await supabase
       .from("inventory_items")
@@ -475,7 +498,7 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
       .in("id", itemIds);
 
     const map = new Map((masterItems ?? []).map((m) => [m.id, m]));
-    inventory = inventory.map((row: any) => ({ ...row, item: map.get(row.item_id) || null }));
+    inventory = inventory.map((row) => ({ ...row, item: map.get(row.item_id || "") || null }));
   }
 
   // Busca separada para os próximos plantões

@@ -13,7 +13,20 @@ export type PatientHistoryItem = {
   actor_role: string;
   created_at: string;
   time_ago: string;
-  changes?: any; // O Diff (Antes/Depois)
+  changes?: unknown; // O Diff (Antes/Depois)
+};
+
+type AuditLogRecord = {
+  id: string;
+  action: string;
+  entity_table: string;
+  changes?: unknown;
+  reason?: string | null;
+  created_at: string;
+  actor?: {
+    email?: string | null;
+    raw_user_meta_data?: Record<string, unknown>;
+  } | null;
 };
 
 export async function getPatientHistoryAction(patientId: string): Promise<PatientHistoryItem[]> {
@@ -44,7 +57,7 @@ export async function getPatientHistoryAction(patientId: string): Promise<Patien
   }
 
   // Formata para a UI
-  return (data ?? []).map((log: any) => {
+  return (data ?? []).map((log: AuditLogRecord) => {
     // Tenta pegar nome do metadata ou email
     const meta = log.actor?.raw_user_meta_data || {};
     const name = meta.full_name || meta.name || log.actor?.email || 'Sistema';

@@ -7,7 +7,7 @@ type AuditLogParams = {
   action: 'LOGIN' | 'LOGOUT' | 'VIEW' | 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'PRINT';
   entity: string; // Ex: 'patients', 'patient_addresses'
   entityId?: string;
-  changes?: Record<string, { old: any; new: any }>; // Diff mínimo
+  changes?: Record<string, { old: unknown; new: unknown }>; // Diff mínimo
   reason?: string;
 };
 

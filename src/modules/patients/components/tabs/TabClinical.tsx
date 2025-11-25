@@ -1,6 +1,7 @@
 'use client';
+/* eslint-disable react-hooks/incompatible-library */
 
-import { useFieldArray, useForm, Resolver } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PatientClinicalSchema, PatientClinicalDTO } from "@/data/definitions/clinical";
 import { upsertClinicalAction } from "@/modules/patients/actions.upsertClinical";
@@ -8,37 +9,22 @@ import { FullPatientDetails } from "@/modules/patients/patient.data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Stethoscope, Heartbeat, Pill, Plus, Trash, Wind, ChartBar, Tag, Syringe, WarningCircle } from "@phosphor-icons/react";
+import { Heartbeat, Pill, Plus, Trash, Wind, ChartBar, Tag, WarningCircle } from "@phosphor-icons/react";
 
 type TabClinicalProps = { patient: FullPatientDetails };
 
-const GaugeCard = ({ title, value, max, colorClass }: { title: string; value?: number; max: number; colorClass: string }) => {
-  const percent = value ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
-  return (
-    <div className="rounded-md border border-slate-200 bg-white p-4">
-      <div className="mb-2 flex items-end justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{title}</span>
-        <span className={`text-2xl font-bold ${colorClass}`}>{value ?? "-"}</span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-        <div className={`h-full ${colorClass.replace("text-", "bg-")}`} style={{ width: `${percent}%` }} />
-      </div>
-    </div>
-  );
-};
-
 export function TabClinical({ patient }: TabClinicalProps) {
-  const clinical = (patient.clinical?.[0] as any) || {};
-  const medicationsList = (patient as any)?.medications || [];
+  const clinical = patient.clinical?.[0] || {};
+  const medicationsList = patient.medications ?? [];
 
   const form = useForm<PatientClinicalDTO>({
-    resolver: zodResolver(PatientClinicalSchema) as Resolver<PatientClinicalDTO>,
+    resolver: zodResolver(PatientClinicalSchema),
     defaultValues: {
       patient_id: patient.id,
       complexity_level: clinical.complexity_level ?? "medium",
@@ -50,7 +36,7 @@ export function TabClinical({ patient }: TabClinicalProps) {
       oxygen_flow: clinical.oxygen_flow ?? "",
       oxygen_equipment: clinical.oxygen_equipment ?? "",
       clinical_tags: clinical.clinical_tags ?? [],
-      medications: medicationsList.map((m: any) => ({
+      medications: medicationsList.map((m) => ({
         id: m.id,
         name: m.name,
         dosage: m.dosage,

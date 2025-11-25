@@ -1,4 +1,6 @@
 'use client'
+/* eslint-disable react-hooks/incompatible-library */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,7 +10,7 @@ import { FullPatientDetails } from "../../patient.data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -84,6 +86,12 @@ export function TabFinancial({ patient }: { patient: FullPatientDetails }) {
         else toast.error("Erro: " + res.error);
     }
 
+    const watchedBondType = form.watch('bond_type');
+    const insurerName = form.watch('insurer_name') || 'Sem Convênio';
+    const planName = form.watch('plan_name') || 'Plano não informado';
+    const insuranceCardNumber = form.watch('insurance_card_number') || '•••• •••• ••••';
+    const insuranceCardValidity = form.watch('insurance_card_validity');
+
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-12 gap-6 pb-20">
@@ -93,23 +101,23 @@ export function TabFinancial({ patient }: { patient: FullPatientDetails }) {
                     <div className="relative overflow-hidden rounded-lg border border-white/20 bg-gradient-to-br from-[#0F2B45] to-[#1B4B7A] p-6 text-white shadow-fluent">
                         <div className="flex items-start justify-between">
                             <span className="rounded border border-white/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em]">
-                                {form.watch('bond_type')}
+                                {watchedBondType}
                             </span>
                             <FirstAid className="h-6 w-6 opacity-80" />
                         </div>
                         <div className="mt-6 space-y-1">
                             <p className="text-[10px] uppercase opacity-80">Operadora</p>
-                            <p className="text-2xl font-bold tracking-wide">{form.watch('insurer_name') || 'Sem Convênio'}</p>
-                            <p className="text-sm font-medium opacity-90">{form.watch('plan_name') || 'Plano não informado'}</p>
+                            <p className="text-2xl font-bold tracking-wide">{insurerName}</p>
+                            <p className="text-sm font-medium opacity-90">{planName}</p>
                         </div>
                         <div className="mt-6 flex flex-wrap items-end justify-between gap-4 text-sm">
                             <div>
                                 <p className="text-[10px] uppercase opacity-80">Carteirinha</p>
-                                <p className="font-mono text-lg tracking-widest">{form.watch('insurance_card_number') || '•••• •••• ••••'}</p>
+                                <p className="font-mono text-lg tracking-widest">{insuranceCardNumber}</p>
                             </div>
                             <div className="text-right">
                                 <p className="text-[10px] uppercase opacity-80">Validade</p>
-                                <p className="font-bold">{formatDate(form.watch('insurance_card_validity'))}</p>
+                                <p className="font-bold">{formatDate(insuranceCardValidity)}</p>
                             </div>
                         </div>
                     </div>
