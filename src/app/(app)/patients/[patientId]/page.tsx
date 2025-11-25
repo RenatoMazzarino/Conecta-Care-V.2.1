@@ -17,8 +17,8 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function PatientDetailsPage({ params }: { params: { patientId: string } }) {
-  const { patientId } = params;
+export default async function PatientDetailsPage({ params }: { params: Promise<{ patientId: string }> }) {
+  const { patientId } = await params;
   const patient = await getPatientDetails(patientId);
 
   if (!patient) return notFound();

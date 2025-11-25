@@ -7,7 +7,8 @@ import { CreateShiftSchema, CreateShiftDTO } from "@/data/definitions/schedule";
 import { 
   ScheduleRow, 
   ScheduleSlot, 
-  ScheduleSlotStatus
+  ScheduleSlotStatus,
+  WeekDay
 } from "./utils";
 import { revalidatePath } from "next/cache";
 
@@ -301,28 +302,6 @@ export async function createShiftAction(data: CreateShiftDTO) {
 
   // service_id em shifts referencia patient_services.id (FK). Alguns schemas não possuem coluna service_id em patient_services,
   // então criamos/recuperamos um vínculo mínimo por paciente.
-  const { data: existingPs } = await supabase
-    .from('patient_services')
-    .select('id')
-    .eq('patient_id', patient_id)
-    .maybeSingle();
-
-  if (existingPs?.id) {
-    patientServiceId = existingPs.id;
-  } else {
-    const { data: createdPs, error: psError } = await supabase
-      .from('patient_services')
-      .insert({
-        patient_id,
-        unit_price: 0,
-      })
-      .select('id')
-      .single();
-    if (psError || !createdPs) {
-      console.error("Erro ao vincular serviço ao paciente:", psError);
-      return { success: false, error: "Erro ao vincular serviço ao paciente." };
-    }
-  }
 
   const { error } = await supabase.from('shifts').insert({
     patient_id,

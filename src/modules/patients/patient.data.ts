@@ -461,7 +461,8 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
     .single();
 
   if (error) {
-    console.error("Erro ao buscar paciente completo:", error);
+    const reason = (error as { message?: string })?.message || JSON.stringify(error);
+    console.error("Erro ao buscar paciente completo:", reason);
     return null;
   }
 

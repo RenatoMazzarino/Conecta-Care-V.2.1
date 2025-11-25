@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from "react";
-import { 
+import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import {
   PencilSimple
 } from "@phosphor-icons/react";
 import { ProfessionalFormDialog } from "./ProfessionalFormDialog";
+import { ProfessionalDTO } from "@/data/definitions/professional";
 
 // Helper para cores de cargo
 const roleColors: Record<string, string> = {
@@ -100,8 +101,20 @@ export function ProfessionalList({ data }: { data: ProfessionalListItem[] }) {
                   Nenhum profissional encontrado.
                 </TableCell>
               </TableRow>
-            ) : (
-              filtered.map((pro) => (
+              ) : (
+              filtered.map((pro) => {
+                const normalizedPro: Partial<ProfessionalDTO> & { id?: string; contact_phone?: string | null } = {
+                  ...pro,
+                  cpf: pro.cpf ?? "",
+                  is_active: pro.is_active ?? true,
+                  role: (pro.role as ProfessionalDTO["role"]) ?? "caregiver",
+                  contact_phone: pro.contact_phone ?? undefined,
+                  phone: pro.phone ?? undefined,
+                  email: pro.email ?? undefined,
+                  professional_license: pro.professional_license ?? undefined,
+                };
+
+                return (
                 <TableRow key={pro.user_id || pro.id} className="hover:bg-slate-50/50">
                   <TableCell>
                     <Avatar className="h-9 w-9 bg-slate-100 border border-slate-200">
@@ -116,7 +129,10 @@ export function ProfessionalList({ data }: { data: ProfessionalListItem[] }) {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1 items-start">
-                      <Badge variant="outline" className={`${roleColors[pro.role] || roleColors.coordinator} uppercase text-[10px]`}>
+                      <Badge
+                        variant="outline"
+                        className={`${roleColors[pro.role as keyof typeof roleColors] || roleColors.coordinator} uppercase text-[10px]`}
+                      >
                         {pro.role}
                       </Badge>
                       {pro.professional_license && (
@@ -137,7 +153,7 @@ export function ProfessionalList({ data }: { data: ProfessionalListItem[] }) {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <ProfessionalFormDialog professional={pro} trigger={
+                      <ProfessionalFormDialog professional={normalizedPro} trigger={
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-[#0F2B45]">
                           <PencilSimple className="h-4 w-4" />
                         </Button>
@@ -145,7 +161,7 @@ export function ProfessionalList({ data }: { data: ProfessionalListItem[] }) {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))
+              )})
             )}
           </TableBody>
         </Table>

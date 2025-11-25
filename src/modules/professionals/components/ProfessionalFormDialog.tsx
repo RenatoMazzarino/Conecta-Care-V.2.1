@@ -27,7 +27,7 @@ export function ProfessionalFormDialog({ professional, trigger }: Props) {
   const isEditing = !!professional;
 
   const form = useForm<ProfessionalDTO>({
-    resolver: zodResolver(ProfessionalSchema),
+    resolver: zodResolver(ProfessionalSchema) as any,
     defaultValues: {
       // Se for edição, preenche. Se não, vazio.
       user_id: professional?.user_id, 
