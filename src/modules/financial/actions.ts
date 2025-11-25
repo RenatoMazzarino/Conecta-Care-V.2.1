@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 
 // --- LEITURA ---
 
-export async function getFinancialStatsAction() {
+export async function getFinancialStatsAction(): Promise<{ pending_revenue: number; open_invoices: number; collected_month: number }> {
   const supabase = await createClient();
   
   const { data: pendingShifts } = await supabase
@@ -19,11 +19,9 @@ export async function getFinancialStatsAction() {
     .eq('status', 'completed')
     .is('billing_batch_id', null);
 
-  type PendingShift = { service?: { unit_price?: number } | null };
-  const pendingValue = pendingShifts?.reduce(
-    (acc: number, shift: PendingShift) => acc + (shift.service?.unit_price || 0),
-    0
-  ) || 0;
+  type PendingShift = { service?: Array<{ unit_price?: number | null }> | null };
+  const pendingValue =
+    pendingShifts?.reduce((acc: number, shift: PendingShift) => acc + (shift.service?.[0]?.unit_price || 0), 0) || 0;
 
   const { data: openBatches } = await supabase
     .from('billing_batches')
@@ -33,9 +31,9 @@ export async function getFinancialStatsAction() {
   const openInvoicesValue = openBatches?.reduce((acc, b) => acc + b.total_amount, 0) || 0;
 
   return {
-    pending_revenue: pendingValue,
-    open_invoices: openInvoicesValue,
-    collected_month: 0
+    pending_revenue: Number(pendingValue),
+    open_invoices: Number(openInvoicesValue),
+    collected_month: 0,
   };
 }
 
@@ -76,11 +74,8 @@ export async function generateBillingBatchAction(data: BillingBatchDTO) {
   if (searchError) return { success: false, error: "Erro ao buscar plantões: " + searchError.message };
   if (!shifts || shifts.length === 0) return { success: false, error: "Nenhum plantão finalizado encontrado para este período." };
 
-  type CompletedShift = { id: string; patient_services?: { unit_price?: number } | null };
-  const totalAmount = shifts.reduce(
-    (acc: number, s: CompletedShift) => acc + (s.patient_services?.unit_price || 0),
-    0
-  );
+  type CompletedShift = { id: string; patient_services?: Array<{ unit_price?: number | null }> | null };
+  const totalAmount = shifts.reduce((acc: number, s: CompletedShift) => acc + (s.patient_services?.[0]?.unit_price || 0), 0);
 
   const { data: batch, error: createError } = await supabase
     .from('billing_batches')

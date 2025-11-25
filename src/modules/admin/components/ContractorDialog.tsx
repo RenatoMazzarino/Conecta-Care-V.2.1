@@ -25,14 +25,14 @@ export function ContractorDialog({ contractor, trigger }: Props) {
   const isEditing = !!contractor;
 
   const form = useForm<ContractorDTO>({
-    resolver: zodResolver(ContractorSchema),
+    resolver: zodResolver(ContractorSchema) as any,
     defaultValues: {
       id: contractor?.id,
       name: contractor?.name ?? "",
       commercial_name: contractor?.commercial_name ?? "",
       document_number: contractor?.document_number ?? "",
       type: contractor?.type ?? "health_plan",
-      billing_due_days: contractor?.billing_due_days ? Number(contractor.billing_due_days) : 30,
+      billing_due_days: contractor?.billing_due_days !== undefined ? Number(contractor.billing_due_days) : 30,
       integration_code: contractor?.integration_code ?? "",
       is_active: contractor?.is_active ?? true,
     }

@@ -4,18 +4,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Buildings, PencilSimple, Trash } from "@phosphor-icons/react/dist/ssr";
+import { ContractorDTO } from "@/data/definitions/contractor";
 
 export const dynamic = 'force-dynamic';
 
 export default async function ContractorsPage() {
-  const contractors = (await getContractorsAction()) as Array<{
-    id: string;
-    name: string;
-    document_number: string;
-    type: string;
-    billing_due_days?: number;
-    is_active?: boolean;
-  }>;
+  const normalizeType = (type?: string | null): ContractorDTO["type"] => {
+    if (type === "health_plan" || type === "private_individual" || type === "public_entity") return type;
+    return "health_plan";
+  };
+
+  const contractors = (await getContractorsAction()).map((c) => ({
+    ...c,
+    type: normalizeType((c as any).type),
+  })) as Array<ContractorDTO & { id: string; billing_due_days?: number | null; is_active?: boolean | null }>;
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-8">

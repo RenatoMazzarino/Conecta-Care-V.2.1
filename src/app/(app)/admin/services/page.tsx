@@ -56,7 +56,7 @@ export default async function ServicesPage() {
                             <Badge variant="outline" className="text-[10px] uppercase font-bold border-slate-200 text-slate-500">
                                 {item.category}
                             </Badge>
-                            {item.default_duration_minutes > 0 && (
+                            {(item.default_duration_minutes ?? 0) > 0 && (
                                 <Badge variant="secondary" className="text-[10px] bg-slate-100 text-slate-600 flex items-center gap-1">
                                     <Clock size={12} /> {item.default_duration_minutes} min
                                 </Badge>
@@ -69,7 +69,9 @@ export default async function ServicesPage() {
                             }/>
                             <form action={async () => {
                                 "use server";
-                                await deleteServiceAction(item.id);
+                                if (item.id) {
+                                  await deleteServiceAction(item.id);
+                                }
                             }}>
                               <Button type="submit" variant="ghost" size="sm" className="h-8 w-8 text-rose-500 hover:bg-rose-50">
                                   <Trash />

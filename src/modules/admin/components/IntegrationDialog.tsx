@@ -32,7 +32,7 @@ export function IntegrationDialog({ config, trigger }: Props) {
   const isEditing = !!config;
 
   const form = useForm<IntegrationConfigDTO>({
-    resolver: zodResolver(IntegrationConfigSchema),
+    resolver: zodResolver(IntegrationConfigSchema) as any,
     defaultValues: {
       id: config?.id,
       provider: config?.provider ?? 'conta_azul',

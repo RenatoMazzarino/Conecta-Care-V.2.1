@@ -21,9 +21,10 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { EmergencyContactDTO } from "@/data/definitions/team";
+import { PatientClinicalDTO } from "@/data/definitions/clinical";
 
 export function TabGeneral({ patient }: { patient: FullPatientDetails }) {
-  const clinical = patient.clinical?.[0] || {};
+  const clinical: Partial<PatientClinicalDTO> = patient.clinical?.[0] || {};
   const address = patient.address?.[0] || {};
   const domicile = patient.domicile?.[0] || {};
   const contacts: EmergencyContactDTO[] = patient.contacts || [];

@@ -33,7 +33,7 @@ export function ServiceDialog({ service, trigger }: Props) {
   const isEditing = !!service;
 
   const form = useForm<ServiceDTO>({
-    resolver: zodResolver(ServiceSchema),
+    resolver: zodResolver(ServiceSchema) as any,
     defaultValues: {
       id: service?.id,
       name: service?.name ?? "",

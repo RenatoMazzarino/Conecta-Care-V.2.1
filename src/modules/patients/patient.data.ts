@@ -210,7 +210,7 @@ type GridPatientRow = {
     risk_morse?: number | null;
     oxygen_usage?: boolean | null;
   }>;
-  contractor?: { name?: string | null } | null;
+  contractor?: Array<{ id?: string; name?: string | null }> | null;
   financial?: Array<{ billing_status?: string | null; bond_type?: string | null; payment_method?: string | null }>;
   administrative?: Array<{ admission_type?: string | null; technical_supervisor_name?: string | null; contract_status?: string | null }>;
   shifts?: Array<{ start_time: string; professional_id?: string | null }>;
@@ -405,12 +405,12 @@ export async function getPatientsPaginated(params: GetPatientsParams = {}) {
       full_name: p.full_name,
       social_name: p.social_name,
       age,
-      gender: p.gender,
+      gender: p.gender ?? null,
       city: p.address?.[0]?.city || 'Local não inf.',
-      status: p.status,
+      status: p.status || 'active',
       complexity_level: p.clinical?.[0]?.complexity_level || null,
       diagnosis_main: p.clinical?.[0]?.diagnosis_main,
-      contractor_name: p.contractor?.name || 'Particular',
+      contractor_name: p.contractor?.[0]?.name || 'Particular',
       billing_status: p.financial?.[0]?.billing_status || 'active',
       next_shift: nextShift,
       supervisor_name: p.administrative?.[0]?.technical_supervisor_name || null,

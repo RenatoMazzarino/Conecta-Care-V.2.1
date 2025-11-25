@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, ComponentType } from "react";
+import { IconProps } from "@phosphor-icons/react";
 import { getPatientHistoryAction, PatientHistoryItem } from "../../actions.history";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,7 @@ import {
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
 
-const actionStyles: Record<string, { icon: ComponentType<{ className?: string; weight?: string }>; color: string; bg: string }> = {
+const actionStyles: Record<string, { icon: ComponentType<IconProps>; color: string; bg: string }> = {
     CREATE: { icon: PlusCircle, color: "text-emerald-600", bg: "bg-emerald-100" },
     UPDATE: { icon: PencilSimple, color: "text-blue-600", bg: "bg-blue-100" },
     DELETE: { icon: Trash, color: "text-rose-600", bg: "bg-rose-100" },
@@ -84,19 +85,19 @@ export function TabHistory({ patient }: { patient: { id: string } }) {
                                                     </div>
                                                 </div>
                                                 
-                                                {log.changes && (
+                                                {log.changes ? (
                                                     <Button variant="ghost" size="sm" onClick={() => toggleExpand(log.id)} className="text-slate-400 hover:text-[#0F2B45]">
                                                         {isExpanded ? <CaretUp /> : <CaretDown />}
                                                     </Button>
-                                                )}
+                                                ) : null}
                                             </div>
 
-                                            {isExpanded && log.changes && (
+                                            {isExpanded && log.changes ? (
                                                 <div className="mt-4 p-3 bg-slate-50 rounded border border-slate-100 text-xs font-mono overflow-x-auto">
                                                     <p className="text-[10px] font-bold uppercase text-slate-400 mb-2">Detalhes da Alteração</p>
                                                     <pre className="text-slate-600 whitespace-pre-wrap break-words">{JSON.stringify(log.changes, null, 2)}</pre>
                                                 </div>
-                                            )}
+                                            ) : null}
                                         </div>
                                     </div>
                                 );

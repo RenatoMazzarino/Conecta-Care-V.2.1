@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import readXlsxFile from 'read-excel-file';
+import readXlsxFile, { Schema } from 'read-excel-file';
 import { isValidCPF } from '@/lib/validation';
 import { bulkImportPatientsAction, BulkImportPatient } from '../actions.bulk-import';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ const schema = {
   'Data Nascimento': { prop: 'date_of_birth', type: Date },
   'Gênero': { prop: 'gender', type: String },
   'Operadora': { prop: 'contractor_name', type: String }
-} as const;
+} as unknown as Schema<ImportedRow>;
 
 export function BulkImportPage() {
   const [fileData, setFileData] = useState<ImportedRow[]>([]);
@@ -77,12 +77,13 @@ export function BulkImportPage() {
       let dobDisplay = '-';
       let dobISO: string | undefined;
 
-      if (row.date_of_birth instanceof Date) {
-        dobISO = row.date_of_birth.toISOString().split('T')[0];
-        dobDisplay = row.date_of_birth.toLocaleDateString('pt-BR');
-      } else if (typeof row.date_of_birth === 'string') {
-        dobDisplay = row.date_of_birth;
-        dobISO = row.date_of_birth;
+      const rawDob = row.date_of_birth as Date | string | undefined;
+      if (rawDob instanceof Date) {
+        dobISO = rawDob.toISOString().split('T')[0];
+        dobDisplay = rawDob.toLocaleDateString('pt-BR');
+      } else if (typeof rawDob === 'string') {
+        dobDisplay = rawDob;
+        dobISO = rawDob;
       }
 
       return {
@@ -109,7 +110,12 @@ export function BulkImportPage() {
         full_name: d.full_name,
         cpf: d.cleanCpf,
         date_of_birth: d.dobISO,
-        gender: d.gender === 'Masculino' ? 'M' : d.gender === 'Feminino' ? 'F' : 'Other',
+        gender: (() => {
+          const g = (d.gender || "").toString().toLowerCase();
+          if (g === "masculino" || g === "m") return "M";
+          if (g === "feminino" || g === "f") return "F";
+          return "Other";
+        })(),
         contractor_name: d.contractor_name,
       }));
 

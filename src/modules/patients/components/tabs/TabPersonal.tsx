@@ -28,7 +28,7 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
   const legalGuardian = patient.contacts?.find((c) => c?.is_legal_representative);
 
   const form = useForm<PatientPersonalDTO>({
-    resolver: zodResolver(PatientPersonalSchema),
+    resolver: zodResolver(PatientPersonalSchema) as any,
     defaultValues: {
       patient_id: patient.id,
       full_name: patient.full_name ?? "",
@@ -54,7 +54,7 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
       mobile_phone: patient.mobile_phone ?? "",
       secondary_phone: patient.secondary_phone ?? "",
       email: patient.email ?? "",
-      pref_contact_method: patient.pref_contact_method ?? "whatsapp",
+      pref_contact_method: (patient.pref_contact_method as PatientPersonalDTO['pref_contact_method']) ?? "whatsapp",
       accept_sms: patient.accept_sms ?? true,
       accept_email: patient.accept_email ?? true,
       block_marketing: patient.block_marketing ?? false,

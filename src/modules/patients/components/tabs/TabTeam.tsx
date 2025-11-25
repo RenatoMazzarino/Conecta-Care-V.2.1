@@ -28,14 +28,23 @@ type TeamMemberRecord = {
 type ContactRecord = EmergencyContactDTO & { id?: string };
 
 // --- MODAL DE ADICIONAR CONTATO (SIMPLIFICADO PARA O EXEMPLO) ---
-function AddContactDialog({ patientId, onSave }: { patientId: string; onSave: (data: Partial<EmergencyContactDTO> & { patient_id: string }) => Promise<{ success: boolean; error?: string }> }) {
+function AddContactDialog({ patientId, onSave }: { patientId: string; onSave: (data: EmergencyContactDTO) => Promise<{ success: boolean; error?: string }> }) {
     const [open, setOpen] = useState(false);
-    const [data, setData] = useState({ full_name: '', relation: '', phone: '', is_legal_representative: false });
+    const [data, setData] = useState({ full_name: '', relation: '', phone: '', email: '', is_legal_representative: false });
 
     const handleSave = async () => {
-        await onSave({ ...data, patient_id: patientId });
+        await onSave({
+            patient_id: patientId,
+            full_name: data.full_name,
+            relation: data.relation,
+            phone: data.phone,
+            email: data.email ?? '',
+            is_legal_representative: data.is_legal_representative,
+            can_authorize_procedures: false,
+            can_view_record: true,
+        });
         setOpen(false);
-        setData({ full_name: '', relation: '', phone: '', is_legal_representative: false });
+        setData({ full_name: '', relation: '', phone: '', email: '', is_legal_representative: false });
     };
 
     return (
@@ -182,7 +191,7 @@ export function TabTeam({ patient }: { patient: FullPatientDetails }) {
                                                 )}
                                             </div>
                                         </div>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-rose-500" onClick={() => handleDeleteContact(contact.id)}>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-rose-500" onClick={() => contact.id && handleDeleteContact(contact.id)} disabled={!contact.id}>
                                             <Trash size={14} />
                                         </Button>
                                     </div>

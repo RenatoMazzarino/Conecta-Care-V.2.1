@@ -26,9 +26,10 @@ export default async function PatientDetailsPage({ params }: { params: { patient
   const initials = patient.full_name.substring(0, 2).toUpperCase();
   const birth = patient.date_of_birth ? new Date(patient.date_of_birth) : null;
   const age = birth ? new Date().getFullYear() - birth.getFullYear() : "N/D";
-  const contractorName = Array.isArray(patient.contractor)
-    ? patient.contractor[0]?.name || "Particular"
-    : patient.contractor?.name || "Particular";
+  const contractorSource = patient.contractor as { name?: string }[] | { name?: string } | null | undefined;
+  const contractorName = Array.isArray(contractorSource)
+    ? contractorSource[0]?.name || "Particular"
+    : contractorSource?.name || "Particular";
   const complexity = patient.clinical?.[0]?.complexity_level;
   const isHighComplexity = complexity === "high" || complexity === "critical";
 

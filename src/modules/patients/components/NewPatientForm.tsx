@@ -44,7 +44,7 @@ export function NewPatientForm() {
   };
 
   const form = useForm<CreatePatientDTO>({
-    resolver: zodResolver(CreatePatientSchema),
+    resolver: zodResolver(CreatePatientSchema) as any,
     defaultValues: {
       full_name: '',
       cpf: '',

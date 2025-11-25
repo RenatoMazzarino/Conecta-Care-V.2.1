@@ -20,12 +20,18 @@ export function BillingGenerator() {
   const [contractors, setContractors] = useState<ContractorDTO[]>([]);
 
   const form = useForm<BillingBatchDTO>({
-    resolver: zodResolver(BillingBatchSchema),
+    resolver: zodResolver(BillingBatchSchema) as any,
   });
 
   useEffect(() => {
     if (open && contractors.length === 0) {
-      getContractorsAction().then(setContractors);
+      getContractorsAction().then((data) => {
+        const normalized = (data || []).map((c: ContractorDTO & { id?: string }) => ({
+          ...c,
+          id: c.id || "",
+        }));
+        setContractors(normalized);
+      });
     }
   }, [open, contractors.length]);
 
@@ -70,7 +76,7 @@ export function BillingGenerator() {
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
                   <SelectContent>
-                    {contractors.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {contractors.map(c => <SelectItem key={c.id} value={c.id || ""}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </FormItem>

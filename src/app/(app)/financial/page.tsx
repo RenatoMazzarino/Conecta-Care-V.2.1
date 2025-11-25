@@ -7,7 +7,7 @@ import { Bank, TrendUp, WarningCircle } from "@phosphor-icons/react/dist/ssr";
 export const dynamic = 'force-dynamic';
 
 export default async function FinancialPage() {
-  const stats = await getFinancialStatsAction();
+  const stats: { pending_revenue: number; open_invoices: number; collected_month: number } = await getFinancialStatsAction();
   const batches = await getBillingBatchesAction();
 
   const fMoney = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

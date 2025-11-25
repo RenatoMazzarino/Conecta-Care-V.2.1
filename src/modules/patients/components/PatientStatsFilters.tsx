@@ -21,11 +21,12 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ComponentType } from "react";
+import { IconProps } from "@phosphor-icons/react";
 
 type StatFilterCardProps = {
   label: string;
   count: number;
-  icon: ComponentType<{ weight?: string; className?: string }>;
+  icon: ComponentType<IconProps>;
   active: boolean;
   onClick: () => void;
   colorClass: string;

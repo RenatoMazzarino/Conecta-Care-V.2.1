@@ -20,11 +20,12 @@ import { Heartbeat, Pill, Plus, Trash, Wind, ChartBar, Tag, WarningCircle } from
 type TabClinicalProps = { patient: FullPatientDetails };
 
 export function TabClinical({ patient }: TabClinicalProps) {
-  const clinical = patient.clinical?.[0] || {};
+  const clinical: Partial<PatientClinicalDTO> = patient.clinical?.[0] || {};
   const medicationsList = patient.medications ?? [];
+  type MedicationInput = PatientClinicalDTO["medications"] extends Array<infer U> ? U : never;
 
   const form = useForm<PatientClinicalDTO>({
-    resolver: zodResolver(PatientClinicalSchema),
+    resolver: zodResolver(PatientClinicalSchema) as any,
     defaultValues: {
       patient_id: patient.id,
       complexity_level: clinical.complexity_level ?? "medium",
@@ -39,11 +40,11 @@ export function TabClinical({ patient }: TabClinicalProps) {
       medications: medicationsList.map((m) => ({
         id: m.id,
         name: m.name,
-        dosage: m.dosage,
-        frequency: m.frequency,
-        route: m.route,
-        is_critical: m.is_critical,
-        status: m.status,
+        dosage: m.dosage || undefined,
+        frequency: m.frequency || undefined,
+        route: m.route || undefined,
+        is_critical: m.is_critical ?? false,
+        status: (m.status ?? "active") as MedicationInput["status"],
       })),
     },
   });

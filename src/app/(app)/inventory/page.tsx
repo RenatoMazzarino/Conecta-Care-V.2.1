@@ -17,6 +17,8 @@ export default async function InventoryPage() {
     model?: string;
     unit_of_measure?: string;
     total_allocated?: number;
+    is_trackable?: boolean;
+    min_stock_level?: number;
   }>;
 
   return (
@@ -69,11 +71,18 @@ export default async function InventoryPage() {
                                 </div>
                                 
                                 <div className="flex gap-1">
-                                    <InventoryMasterDialog item={item} trigger={
+                                    <InventoryMasterDialog
+                                      item={{
+                                        ...item,
+                                        is_trackable: item.is_trackable ?? false,
+                                        min_stock_level: item.min_stock_level ?? 0,
+                                      }}
+                                      trigger={
                                         <Button variant="ghost" size="icon" className="text-slate-400 hover:text-[#0F2B45]">
                                             <PencilSimple size={18} />
                                         </Button>
-                                    }/>
+                                      }
+                                    />
                                 </div>
                             </div>
                         </CardContent>

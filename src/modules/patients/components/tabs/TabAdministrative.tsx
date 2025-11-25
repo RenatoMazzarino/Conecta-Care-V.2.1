@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { PatientAdministrativeSchema, PatientAdministrativeDTO } from "@/data/definitions/administrative";
 import { upsertAdministrativeAction } from "../../actions.upsertAdministrative";
 import { FullPatientDetails } from "../../patient.data";
+import { PatientClinicalDTO } from "@/data/definitions/clinical";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,14 +27,21 @@ const dateToInput = (d?: Date | string | null) => {
 export function TabAdministrative({ patient }: { patient: FullPatientDetails }) {
     // Busca os dados administrativos (se existirem) ou inicializa vazio
     // OBS: Lembre-se de atualizar o patient.data.ts para trazer 'administrative'
-    const admin = patient?.administrative?.[0] || {};
-    const schedule = patient.schedule_settings?.[0] || {};
+    const admin: Partial<PatientAdministrativeDTO> = patient?.administrative?.[0] ?? {};
+    const schedule: Partial<{
+      scheme_type?: string;
+      day_start_time?: string;
+      night_start_time?: string;
+      professionals_per_shift?: number;
+      required_role?: string;
+      auto_generate?: boolean;
+    }> = (patient.schedule_settings?.[0] as any) || {};
     
     // Busca complexidade do perfil clínico (somente leitura ou edição compartilhada)
-    const clinical = patient.clinical?.[0] || {};
+    const clinical: Partial<PatientClinicalDTO> = patient.clinical?.[0] || {};
 
     const form = useForm<PatientAdministrativeDTO>({
-        resolver: zodResolver(PatientAdministrativeSchema),
+        resolver: zodResolver(PatientAdministrativeSchema) as any,
         defaultValues: {
             patient_id: patient.id,
             admission_date: admin.admission_date ? new Date(admin.admission_date) : undefined,
@@ -48,11 +56,11 @@ export function TabAdministrative({ patient }: { patient: FullPatientDetails }) 
             technical_supervisor_name: admin.technical_supervisor_name ?? '',
             administrative_contact_name: admin.administrative_contact_name ?? '',
             
-            scheme_type: schedule.scheme_type ?? '12x36',
+            scheme_type: (schedule.scheme_type as PatientAdministrativeDTO['scheme_type']) ?? '12x36',
             day_start_time: schedule.day_start_time ? schedule.day_start_time.slice(0, 5) : "07:00",
             night_start_time: schedule.night_start_time ? schedule.night_start_time.slice(0, 5) : "19:00",
             professionals_per_shift: schedule.professionals_per_shift ?? 1,
-            required_role: schedule.required_role ?? 'technician',
+            required_role: (schedule.required_role as PatientAdministrativeDTO['required_role']) ?? 'technician',
             auto_generate: schedule.auto_generate ?? true,
         }
     });
