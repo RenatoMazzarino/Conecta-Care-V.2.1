@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { NewPatientForm } from "@/modules/patients/components/NewPatientForm";
 import Link from "next/link";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
+import { PatientWizardForm } from "@/components/patients/wizard/patient-wizard-form";
+import { Suspense } from "react";
 
 export default function NewPatientPage() {
   return (
@@ -21,7 +22,9 @@ export default function NewPatientPage() {
           </Link>
         </div>
 
-        <NewPatientForm />
+        <Suspense fallback={<div className="text-sm text-slate-500">Carregando formulário...</div>}>
+          <PatientWizardForm />
+        </Suspense>
       </div>
     </div>
   );

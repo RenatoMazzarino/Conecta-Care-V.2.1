@@ -229,7 +229,7 @@ export async function getPatients(): Promise<PatientListItem[]> {
       cpf,
       gender,
       date_of_birth,
-      status, 
+      status:record_status, 
       created_at
     `)
     .order("created_at", { ascending: false });
@@ -279,7 +279,8 @@ export async function getPatientsPaginated(params: GetPatientsParams = {}) {
   let query = supabase
     .from("patients")
     .select(`
-      id, full_name, social_name, date_of_birth, status, gender,
+      id, full_name, social_name, date_of_birth, status:record_status, gender,
+      record_status:record_status,
       contractor:contractors(id, name),
       address:patient_addresses(city, neighborhood, zone_type),
       clinical:patient_clinical_profiles(complexity_level, diagnosis_main, clinical_tags, risk_braden, risk_morse, oxygen_usage),
@@ -292,7 +293,7 @@ export async function getPatientsPaginated(params: GetPatientsParams = {}) {
     query = query.or(`full_name.ilike.%${search}%,cpf.ilike.%${search}%`);
   }
   if (status && status !== 'all') {
-    query = query.eq('status', status);
+    query = query.eq('record_status', status);
   }
   if (gender && gender !== 'all') {
     query = query.eq('gender', gender);
@@ -367,11 +368,7 @@ export async function getPatientsPaginated(params: GetPatientsParams = {}) {
     }
   }
   if (contractorId && contractorId !== 'all') {
-    query = query.eq('contractor.id', contractorId);
-  }
-
-  if (billingStatus && billingStatus !== 'all') {
-    query = query.eq('financial.billing_status', billingStatus);
+    query = query.eq('primary_contractor_id', contractorId);
   }
 
   query = query.order("full_name", { ascending: true }).range(from, to);
@@ -515,5 +512,10 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
     .limit(5);
 
   // Cast forçado seguro, pois garantimos a estrutura acima
-  return { ...data, contacts: contacts ?? [], team: team ?? [], inventory, next_shifts: shifts || [] } as unknown as FullPatientDetails;
+  const normalized = {
+    ...data,
+    status: (data as any)?.status ?? (data as any)?.record_status ?? null,
+  };
+
+  return { ...normalized, contacts: contacts ?? [], team: team ?? [], inventory, next_shifts: shifts || [] } as unknown as FullPatientDetails;
 }
