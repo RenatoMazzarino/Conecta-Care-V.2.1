@@ -223,21 +223,27 @@ export function PatientDataGrid({ data, currentPage = 1, totalPages = 1, totalCo
                               {getInitials(row.full_name)}
                             </AvatarFallback>
                           </Avatar>
-                          <div
-                            className={cn(
-                              "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-white",
-                              row.status === 'active' ? "bg-green-700" : "bg-gray-400"
-                            )}
-                          />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-[#0F2B45] group-hover:text-blue-700">{row.full_name}</p>
-                          <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
-                            <MapPin size={12} /> {row.city || '—'} {row.age ? `• ${row.age} anos` : ''}
-                          </p>
-                        </div>
-                      </Link>
-                    </TableCell>
+                  <div
+                    className={cn(
+                      "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-white",
+                      row.status === 'active'
+                        ? "bg-green-700"
+                        : row.status === 'onboarding'
+                        ? "bg-blue-600"
+                        : row.status === 'draft'
+                        ? "bg-slate-400"
+                        : "bg-gray-400"
+                    )}
+                  />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[#0F2B45] group-hover:text-blue-700">{row.full_name}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                    <MapPin size={12} /> {row.city || '—'} {row.age ? `• ${row.age} anos` : ''}
+                  </p>
+                </div>
+              </Link>
+            </TableCell>
 
                     <TableCell>
                       <div className="flex flex-col items-start gap-1">

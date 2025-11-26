@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { upsertAddressWizardAction } from "@/app/(app)/patients/new/actions";
@@ -27,9 +27,10 @@ type AddressFormValues = z.infer<typeof AddressSchema>;
 type StepAddressProps = {
   patientId?: string | null;
   onComplete: () => void;
+  onBack: () => void;
 };
 
-export function StepAddress({ patientId, onComplete }: StepAddressProps) {
+export function StepAddress({ patientId, onComplete, onBack }: StepAddressProps) {
   const toast = useToast();
   const supabase = createClient();
 
@@ -88,21 +89,22 @@ export function StepAddress({ patientId, onComplete }: StepAddressProps) {
   };
 
   return (
-    <Card className="shadow-sm border border-slate-200">
+    <Card className="shadow-fluent border-slate-200">
       <CardHeader>
-        <CardTitle className="text-lg text-[#0F2B45]">Passo 2: Localização</CardTitle>
+        <CardTitle className="text-base font-semibold text-[#0F2B45]">Passo 2: Localização</CardTitle>
+        <CardDescription className="text-slate-500">Endereço e logística do atendimento.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="bg-white border border-slate-100 rounded-md p-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
             <FormField
               control={form.control}
               name="zip_code"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-12 md:col-span-4">
                   <FormLabel>CEP</FormLabel>
                   <FormControl>
-                    <Input placeholder="00000-000" {...field} />
+                    <Input placeholder="00000-000" {...field} className="bg-white" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -112,10 +114,10 @@ export function StepAddress({ patientId, onComplete }: StepAddressProps) {
               control={form.control}
               name="street"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-12 md:col-span-8">
                   <FormLabel>Rua</FormLabel>
                   <FormControl>
-                    <Input placeholder="Rua" {...field} />
+                    <Input placeholder="Rua" {...field} className="bg-white" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -125,10 +127,10 @@ export function StepAddress({ patientId, onComplete }: StepAddressProps) {
               control={form.control}
               name="number"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-6 md:col-span-4">
                   <FormLabel>Número</FormLabel>
                   <FormControl>
-                    <Input placeholder="123" {...field} />
+                    <Input placeholder="123" {...field} className="bg-white" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -138,10 +140,10 @@ export function StepAddress({ patientId, onComplete }: StepAddressProps) {
               control={form.control}
               name="neighborhood"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-6 md:col-span-4">
                   <FormLabel>Bairro</FormLabel>
                   <FormControl>
-                    <Input placeholder="Bairro" {...field} />
+                    <Input placeholder="Bairro" {...field} className="bg-white" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -151,10 +153,10 @@ export function StepAddress({ patientId, onComplete }: StepAddressProps) {
               control={form.control}
               name="city"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-8 md:col-span-6">
                   <FormLabel>Cidade</FormLabel>
                   <FormControl>
-                    <Input placeholder="Cidade" {...field} />
+                    <Input placeholder="Cidade" {...field} className="bg-white" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -164,18 +166,21 @@ export function StepAddress({ patientId, onComplete }: StepAddressProps) {
               control={form.control}
               name="state"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-4 md:col-span-2">
                   <FormLabel>UF</FormLabel>
                   <FormControl>
-                    <Input placeholder="SP" maxLength={2} {...field} />
+                    <Input placeholder="SP" maxLength={2} {...field} className="bg-white" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="md:col-span-2 flex justify-end">
-              <Button type="submit" className="bg-[#0F2B45] text-white">
+            <div className="col-span-12 flex justify-between border-t border-slate-100 pt-4">
+              <Button type="button" variant="outline" onClick={onBack}>
+                Voltar
+              </Button>
+              <Button type="submit" className="bg-[#0F2B45] text-white px-6">
                 Salvar e Avançar
               </Button>
             </div>

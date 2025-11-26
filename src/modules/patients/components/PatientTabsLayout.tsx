@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { FullPatientDetails } from "../patient.data";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +14,10 @@ import { TabFinancial } from "./tabs/TabFinancial";
 import { TabDocuments } from "./tabs/TabDocuments";
 import { TabHistory } from "./tabs/TabHistory";
 import { TabHistoryAudit } from "@/components/patients/v2/tab-history-audit";
+import { BusinessProcessFlow, BPF_STEPS } from "@/components/patients/v2/business-process-flow";
+import * as React from "react";
+import { WarningCircle } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
 
 const tabs = [
   { id: "general", label: "Visão Geral" },
@@ -30,13 +33,121 @@ const tabs = [
 ];
 
 export function PatientTabsLayout({ patient, embedded = false }: { patient: FullPatientDetails; embedded?: boolean }) {
-  const [activeTab, setActiveTab] = useState("general");
+  const isAdmissionFlow = patient.record_status === "onboarding" || patient.record_status === "draft";
+  const [activeTab, setActiveTab] = React.useState(isAdmissionFlow ? "personal" : "general");
+  const [localCompleted, setLocalCompleted] = React.useState<string[]>([]);
+  const [warnings, setWarnings] = React.useState<string[]>([]);
 
   const contentWrapper = embedded ? "bg-[#faf9f8] pt-6" : "bg-[#faf9f8] min-h-screen py-8 px-6";
   const innerSpacing = embedded ? "max-w-[1600px] mx-auto px-8" : "max-w-[1600px] mx-auto";
 
+  const completedSteps = [
+    ...(patient.full_name ? ["personal"] : []),
+    ...(patient.address && patient.address.length > 0 ? ["address"] : []),
+    ...(patient.clinical && patient.clinical.length > 0 ? ["clinical"] : []),
+    ...(patient.administrative && patient.administrative.length > 0 ? ["administrative"] : []),
+    ...(patient.financial && patient.financial.length > 0 ? ["financial"] : []),
+    ...(patient.documents && patient.documents.length > 0 ? ["documents"] : []),
+    ...(patient.record_status === "active" ? ["review"] : []),
+    ...localCompleted,
+  ];
+
+  const handleStepChange = (stepId: string) => {
+    const map: Record<string, string> = {
+      personal: "personal",
+      address: "address",
+      clinical: "clinical",
+      administrative: "administrative",
+      financial: "financial",
+      documents: "documents",
+      review: "general",
+    };
+    setActiveTab(map[stepId] || "personal");
+    setWarnings([]);
+  };
+
+  const validateCurrentStep = () => {
+    const missing: string[] = [];
+    switch (activeTab) {
+      case "personal":
+        if (!patient.full_name) missing.push("Nome completo");
+        if (!patient.cpf) missing.push("CPF");
+        if (!patient.date_of_birth) missing.push("Data de nascimento");
+        if (!patient.gender) missing.push("Sexo");
+        break;
+      case "address":
+        if (!patient.address?.[0]?.zip_code) missing.push("CEP");
+        if (!patient.address?.[0]?.street) missing.push("Rua");
+        if (!patient.address?.[0]?.city) missing.push("Cidade");
+        if (!patient.address?.[0]?.state) missing.push("UF");
+        break;
+      case "clinical":
+        if (!patient.clinical || patient.clinical.length === 0) missing.push("Perfil clínico");
+        break;
+      case "administrative":
+        if (!patient.administrative || patient.administrative.length === 0) missing.push("Dados administrativos");
+        break;
+      case "financial":
+        if (!patient.financial || patient.financial.length === 0) missing.push("Dados financeiros");
+        break;
+      case "documents":
+        if (!patient.documents || patient.documents.length === 0) missing.push("Documentos");
+        break;
+      default:
+        break;
+    }
+    setWarnings(missing);
+    if (missing.length === 0 && !completedSteps.includes(activeTab)) {
+      setLocalCompleted((prev) => [...prev, activeTab]);
+    }
+  };
+
+  const goNext = () => {
+    const idx = BPF_STEPS.findIndex((s) => {
+      const map: Record<string, string> = {
+        personal: "personal",
+        address: "address",
+        clinical: "clinical",
+        administrative: "administrative",
+        financial: "financial",
+        documents: "documents",
+        review: "general",
+      };
+      return map[s.id] === activeTab || s.id === activeTab;
+    });
+    const next = BPF_STEPS[idx + 1];
+    if (next) handleStepChange(next.id);
+  };
+
   return (
     <>
+      {isAdmissionFlow && (
+        <div className="mb-4 px-6">
+          <BusinessProcessFlow
+            activeStep={activeTab === "general" ? "personal" : activeTab}
+            onStepChange={handleStepChange}
+            completedSteps={completedSteps}
+          />
+          <div className="mt-3 flex items-center justify-between gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              {warnings.length > 0 && (
+                <div className="flex items-center gap-1 text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded">
+                  <WarningCircle className="h-4 w-4" weight="fill" />
+                  <span>Pendências: {warnings.join(", ")}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={validateCurrentStep}>
+                Validar etapa
+              </Button>
+              <Button variant="default" size="sm" onClick={goNext}>
+                Avançar (permitido com pendências)
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       <div
         className={
           embedded

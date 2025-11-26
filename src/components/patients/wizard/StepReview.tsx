@@ -10,9 +10,10 @@ import { createClient } from "@/lib/supabase/client";
 
 type StepReviewProps = {
   patientId?: string | null;
+  onBack?: () => void;
 };
 
-export function StepReview({ patientId }: StepReviewProps) {
+export function StepReview({ patientId, onBack }: StepReviewProps) {
   const toast = useToast();
   const router = useRouter();
   const supabase = createClient();
@@ -54,16 +55,19 @@ export function StepReview({ patientId }: StepReviewProps) {
   };
 
   return (
-    <Card className="shadow-sm border border-slate-200">
+    <Card className="shadow-fluent border-slate-200">
       <CardHeader>
-        <CardTitle className="text-lg text-[#0F2B45]">Passo 4: Revisão & Ativação</CardTitle>
+        <CardTitle className="text-base font-semibold text-[#0F2B45]">Passo 4: Revisão & Ativação</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 bg-white border border-slate-100 rounded-md p-6">
         <Section title="Identificação" data={personal} fallback="Preencha o Passo 1" />
         <Section title="Endereço" data={address} fallback="Preencha o Passo 2" />
         <Section title="Financeiro" data={financial} fallback="Passo 3 opcional" />
 
-        <div className="flex justify-end">
+        <div className="flex justify-between border-t border-slate-100 pt-4">
+          <Button variant="outline" onClick={onBack}>
+            Voltar
+          </Button>
           <Button onClick={handleFinish} disabled={loading} className="bg-[#0F2B45] text-white">
             {loading ? "Finalizando..." : "Finalizar Admissão"}
           </Button>

@@ -7,7 +7,6 @@ import { StepPersonal } from "./StepPersonal";
 import { StepAddress } from "./StepAddress";
 import { StepFinancial } from "./StepFinancial";
 import { StepReview } from "./StepReview";
-import { Card } from "@/components/ui/card";
 
 export function PatientWizardForm() {
   const searchParams = useSearchParams();
@@ -41,24 +40,25 @@ export function PatientWizardForm() {
       case 1:
         return <StepPersonal patientId={patientId} onComplete={(id) => goToStep(2, id)} />;
       case 2:
-        return <StepAddress patientId={patientId} onComplete={() => goToStep(3)} />;
+        return <StepAddress patientId={patientId} onComplete={() => goToStep(3)} onBack={() => goToStep(1)} />;
       case 3:
         return (
           <StepFinancial
             patientId={patientId}
             onComplete={() => goToStep(4)}
             onSkip={() => goToStep(4)}
+            onBack={() => goToStep(2)}
           />
         );
       default:
-        return <StepReview patientId={patientId} />;
+        return <StepReview patientId={patientId} onBack={() => goToStep(3)} />;
     }
   }, [currentStep, patientId]);
 
   return (
     <div className="space-y-6">
       <WizardStepper currentStep={currentStep} />
-      <Card className="p-0 border-none shadow-none">{stepComponent}</Card>
+      {stepComponent}
     </div>
   );
 }

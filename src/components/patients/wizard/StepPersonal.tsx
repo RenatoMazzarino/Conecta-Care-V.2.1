@@ -6,7 +6,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { upsertPersonalWizardAction } from "@/app/(app)/patients/new/actions";
@@ -116,21 +116,22 @@ export function StepPersonal({ patientId, onComplete }: StepPersonalProps) {
   };
 
   return (
-    <Card className="shadow-sm border border-slate-200">
+    <Card className="shadow-fluent border-slate-200">
       <CardHeader>
-        <CardTitle className="text-lg text-[#0F2B45]">Passo 1: Identificação & Docs</CardTitle>
+        <CardTitle className="text-base font-semibold text-[#0F2B45]">Passo 1: Identificação & Docs</CardTitle>
+        <CardDescription className="text-slate-500">Dados essenciais para criar o prontuário.</CardDescription>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <CardContent className="bg-white border border-slate-100 rounded-md p-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
             <FormField
               control={form.control}
               name="full_name"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-12 md:col-span-8">
                   <FormLabel>Nome Completo</FormLabel>
                   <FormControl>
-                    <Input placeholder="Nome completo" {...field} />
+                    <Input placeholder="Nome completo" {...field} className="bg-white" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -140,10 +141,10 @@ export function StepPersonal({ patientId, onComplete }: StepPersonalProps) {
               control={form.control}
               name="cpf"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-12 md:col-span-4">
                   <FormLabel>CPF</FormLabel>
                   <FormControl>
-                    <Input placeholder="000.000.000-00" {...field} />
+                    <Input placeholder="000.000.000-00" {...field} className="bg-white" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -153,10 +154,10 @@ export function StepPersonal({ patientId, onComplete }: StepPersonalProps) {
               control={form.control}
               name="date_of_birth"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-12 md:col-span-4">
                   <FormLabel>Data de Nascimento</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input type="date" {...field} className="bg-white" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -166,17 +167,17 @@ export function StepPersonal({ patientId, onComplete }: StepPersonalProps) {
               control={form.control}
               name="gender"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-12 md:col-span-4">
                   <FormLabel>Sexo</FormLabel>
                   <FormControl>
-                    <Input placeholder="M / F / Other" {...field} />
+                    <Input placeholder="M / F / Other" {...field} className="bg-white" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="md:col-span-2 flex items-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 p-4">
+            <div className="col-span-12 flex items-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 p-4">
               <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer">
                 <UploadSimple className="h-4 w-4" />
                 <span>Enviar RG/CPF (opcional)</span>
@@ -193,8 +194,8 @@ export function StepPersonal({ patientId, onComplete }: StepPersonalProps) {
               {uploading && <span className="text-xs text-slate-500">Enviando...</span>}
             </div>
 
-            <div className="md:col-span-2 flex justify-end">
-              <Button type="submit" className="bg-[#0F2B45] text-white">
+            <div className="col-span-12 flex justify-end border-t border-slate-100 pt-4">
+              <Button type="submit" className="bg-[#0F2B45] text-white px-6">
                 Salvar e Avançar
               </Button>
             </div>

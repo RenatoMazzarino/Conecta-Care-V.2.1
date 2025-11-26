@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from "@/lib/utils";
+import { CheckCircle } from "@phosphor-icons/react";
 
 type WizardStepperProps = {
   currentStep: number;
@@ -15,36 +16,48 @@ const steps = [
 
 export function WizardStepper({ currentStep }: WizardStepperProps) {
   return (
-    <div className="flex items-center gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      {steps.map((step, index) => {
-        const isActive = currentStep === step.id;
-        const isCompleted = currentStep > step.id;
-        const isLast = index === steps.length - 1;
-
-        return (
-          <div key={step.id} className="flex items-center gap-3 flex-1 min-w-0">
+    <div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="grid grid-cols-4">
+        {steps.map((step, idx) => {
+          const isActive = currentStep === step.id;
+          const isCompleted = currentStep > step.id;
+          const base =
+            "flex items-center gap-3 px-4 py-3 border-r border-slate-200 bg-white";
+          return (
             <div
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold transition-colors",
-                isActive
-                  ? "border-[#0F2B45] bg-[#0F2B45] text-white"
-                  : isCompleted
-                  ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                  : "border-slate-200 bg-slate-50 text-slate-500"
-              )}
+              key={step.id}
+              className={cn(base, {
+                "text-slate-400": !isActive && !isCompleted,
+                "border-r-0": idx === steps.length - 1,
+              })}
             >
-              {isCompleted ? "✓" : step.id}
+              <div
+                className={cn(
+                  "h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold",
+                  isActive
+                    ? "bg-[#0F2B45] text-white"
+                    : isCompleted
+                    ? "bg-emerald-500 text-white"
+                    : "bg-slate-100 text-slate-500"
+                )}
+              >
+                {isCompleted ? <CheckCircle weight="fill" /> : step.id}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Passo {step.id}</p>
+                <p
+                  className={cn(
+                    "text-sm font-semibold truncate pb-1",
+                    isActive ? "text-slate-900 border-b-2 border-b-[#0F2B45]" : "text-slate-600"
+                  )}
+                >
+                  {step.label}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Passo {step.id}</p>
-              <p className={cn("text-sm font-bold truncate", isActive ? "text-[#0F2B45]" : "text-slate-700")}>
-                {step.label}
-              </p>
-            </div>
-            {!isLast && <div className="flex-1 border-t border-dashed border-slate-200" />}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

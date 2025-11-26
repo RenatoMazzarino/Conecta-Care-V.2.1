@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { upsertFinancialWizardAction } from "@/app/(app)/patients/new/actions";
@@ -27,9 +27,10 @@ type StepFinancialProps = {
   patientId?: string | null;
   onComplete: () => void;
   onSkip: () => void;
+  onBack: () => void;
 };
 
-export function StepFinancial({ patientId, onComplete, onSkip }: StepFinancialProps) {
+export function StepFinancial({ patientId, onComplete, onSkip, onBack }: StepFinancialProps) {
   const toast = useToast();
   const supabase = createClient();
 
@@ -86,21 +87,22 @@ export function StepFinancial({ patientId, onComplete, onSkip }: StepFinancialPr
   };
 
   return (
-    <Card className="shadow-sm border border-slate-200">
+    <Card className="shadow-fluent border-slate-200">
       <CardHeader>
-        <CardTitle className="text-lg text-[#0F2B45]">Passo 3: Vínculo Financeiro</CardTitle>
+        <CardTitle className="text-base font-semibold text-[#0F2B45]">Passo 3: Vínculo Financeiro</CardTitle>
+        <CardDescription className="text-slate-500">Defina vínculo e carteirinha. Pode pular se ainda não souber.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="bg-white border border-slate-100 rounded-md p-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
             <FormField
               control={form.control}
               name="bond_type"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-12 md:col-span-6 lg:col-span-4">
                   <FormLabel>Plano</FormLabel>
                   <FormControl>
-                    <Input placeholder="Particular / Convênio" {...field} />
+                    <Input placeholder="Particular / Convênio" {...field} className="bg-white" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -110,10 +112,10 @@ export function StepFinancial({ patientId, onComplete, onSkip }: StepFinancialPr
               control={form.control}
               name="insurer_name"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-12 md:col-span-6 lg:col-span-4">
                   <FormLabel>Operadora</FormLabel>
                   <FormControl>
-                    <Input placeholder="Unimed, Bradesco..." {...field} />
+                    <Input placeholder="Unimed, Bradesco..." {...field} className="bg-white" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -123,10 +125,10 @@ export function StepFinancial({ patientId, onComplete, onSkip }: StepFinancialPr
               control={form.control}
               name="insurance_card_number"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-12 md:col-span-6 lg:col-span-4">
                   <FormLabel>Carteirinha</FormLabel>
                   <FormControl>
-                    <Input placeholder="Número da carteirinha" {...field} />
+                    <Input placeholder="Número da carteirinha" {...field} className="bg-white" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -136,7 +138,7 @@ export function StepFinancial({ patientId, onComplete, onSkip }: StepFinancialPr
               control={form.control}
               name="insurance_card_validity"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-12 md:col-span-6 lg:col-span-4">
                   <FormLabel>Validade</FormLabel>
                   <FormControl>
                     <Input
@@ -147,6 +149,7 @@ export function StepFinancial({ patientId, onComplete, onSkip }: StepFinancialPr
                           : ""
                       }
                       onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                      className="bg-white"
                     />
                   </FormControl>
                   <FormMessage />
@@ -154,11 +157,16 @@ export function StepFinancial({ patientId, onComplete, onSkip }: StepFinancialPr
               )}
             />
 
-            <div className="md:col-span-2 flex justify-between">
-              <Button type="button" variant="outline" onClick={onSkip}>
-                Pular / Definir Depois
-              </Button>
-              <Button type="submit" className="bg-[#0F2B45] text-white">
+            <div className="col-span-12 flex justify-between border-t border-slate-100 pt-4">
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={onBack}>
+                  Voltar
+                </Button>
+                <Button type="button" variant="outline" onClick={onSkip}>
+                  Pular / Definir Depois
+                </Button>
+              </div>
+              <Button type="submit" className="bg-[#0F2B45] text-white px-6">
                 Salvar e Avançar
               </Button>
             </div>

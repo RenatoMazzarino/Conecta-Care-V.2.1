@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { UserPlus, MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { QuickCreatePatient } from "@/components/patients/quick-create-patient";
 
 export const dynamic = 'force-dynamic';
 
@@ -121,11 +122,7 @@ export default async function PatientsPage({
                 )}
               </form>
             </div>
-            <Link href="/patients/new">
-              <Button className="bg-[#0F2B45] text-white h-10 shadow-sm hover:bg-[#163A5C] gap-2">
-                <UserPlus weight="bold" size={16} /> Novo Paciente
-              </Button>
-            </Link>
+            <QuickCreatePatient />
           </div>
         </div>
 
