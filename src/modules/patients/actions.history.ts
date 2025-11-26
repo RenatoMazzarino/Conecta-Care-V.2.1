@@ -23,22 +23,13 @@ type AuditLogRecord = {
   changes?: unknown;
   reason?: string | null;
   created_at: string;
-  actor?:
-    | {
-        email?: string | null;
-        raw_user_meta_data?: Record<string, unknown>;
-      }
-    | Array<{
-        email?: string | null;
-        raw_user_meta_data?: Record<string, unknown>;
-      }>
-    | null;
+  actor_id?: string | null;
 };
 
 export async function getPatientHistoryAction(patientId: string): Promise<PatientHistoryItem[]> {
   const supabase = await createClient();
 
-  // Busca na tabela MESTRA de auditoria, filtrando pelo paciente
+  // Busca na tabela MESTRA de auditoria, filtrando pelo paciente (parent_patient_id)
   const { data, error } = await supabase
     .from('system_audit_logs')
     .select(`
@@ -48,31 +39,43 @@ export async function getPatientHistoryAction(patientId: string): Promise<Patien
       changes,
       reason,
       created_at,
-      actor:actor_id (
-         email,
-         raw_user_meta_data
-      )
+      actor_id
     `)
-    .eq('entity_id', patientId) // <--- Filtra só este paciente
-    .in('action', ['CREATE', 'UPDATE', 'DELETE', 'VALIDATE']) // Ignora 'VIEW'/'EXPORT'
+    .eq('parent_patient_id', patientId)
     .order('created_at', { ascending: false });
+
+  let historyRows = data;
+
+  // Fallback: se não houver parent_patient_id, tenta pelo entity_id
+  if (!historyRows || historyRows.length === 0) {
+    const alt = await supabase
+      .from('system_audit_logs')
+      .select(`
+        id,
+        action,
+        entity_table,
+        changes,
+        reason,
+        created_at,
+        actor_id
+      `)
+      .eq('entity_id', patientId)
+      .order('created_at', { ascending: false });
+    historyRows = alt.data || [];
+  }
 
   if (error) {
     console.error("Erro ao buscar histórico:", error);
+  }
+
+  if (!historyRows) {
     return [];
   }
 
   // Formata para a UI
-  return (data ?? []).map((log: AuditLogRecord) => {
-    // Tenta pegar nome do metadata ou email
-    const actor = Array.isArray(log.actor) ? log.actor[0] : log.actor;
-    const meta = (actor?.raw_user_meta_data || {}) as Record<string, unknown>;
-    const name =
-      (typeof meta.full_name === "string" && meta.full_name) ||
-      (typeof meta.name === "string" && meta.name) ||
-      (actor?.email as string | undefined) ||
-      "Sistema";
-    const role = (typeof meta.role === "string" && meta.role) || "Usuário";
+  return historyRows.map((log: AuditLogRecord) => {
+    const name = log.actor_id || "Sistema";
+    const role = "Usuário";
     
     return {
       id: log.id,

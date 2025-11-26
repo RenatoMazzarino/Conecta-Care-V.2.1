@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
-    ClockCounterClockwise, PencilSimple, PlusCircle, Trash, CheckCircle, User, CaretDown, CaretUp
+    ClockCounterClockwise, PencilSimple, PlusCircle, Trash, CheckCircle, User, CaretDown, CaretUp, Eye, Printer, ArrowSquareOut, SignIn, SignOut, GearSix
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
 
@@ -16,6 +16,12 @@ const actionStyles: Record<string, { icon: ComponentType<IconProps>; color: stri
     UPDATE: { icon: PencilSimple, color: "text-blue-600", bg: "bg-blue-100" },
     DELETE: { icon: Trash, color: "text-rose-600", bg: "bg-rose-100" },
     VALIDATE: { icon: CheckCircle, color: "text-violet-600", bg: "bg-violet-100" },
+    VIEW: { icon: Eye, color: "text-slate-600", bg: "bg-slate-100" },
+    EXPORT: { icon: ArrowSquareOut, color: "text-amber-700", bg: "bg-amber-100" },
+    PRINT: { icon: Printer, color: "text-sky-700", bg: "bg-sky-100" },
+    LOGIN: { icon: SignIn, color: "text-emerald-700", bg: "bg-emerald-100" },
+    LOGOUT: { icon: SignOut, color: "text-slate-700", bg: "bg-slate-100" },
+    SYSTEM_JOB: { icon: GearSix, color: "text-slate-700", bg: "bg-slate-100" },
 };
 
 export function TabHistory({ patient }: { patient: { id: string } }) {

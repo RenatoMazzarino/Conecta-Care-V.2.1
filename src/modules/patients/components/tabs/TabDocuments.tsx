@@ -146,6 +146,12 @@ export function TabDocuments({ patient }: { patient: FullPatientDetails }) {
         ? documents 
         : documents.filter((d: any) => d.category === filter);
 
+    const expiredCount = documents.filter((doc: any) => {
+        if (!doc?.expires_at) return false;
+        const exp = new Date(doc.expires_at);
+        return !Number.isNaN(exp.getTime()) && exp.getTime() < Date.now();
+    }).length;
+
     const handleDownload = async (path: string) => {
         const res = await getDocumentUrlAction(path);
         if (res.success && res.url) {
@@ -182,12 +188,12 @@ export function TabDocuments({ patient }: { patient: FullPatientDetails }) {
                             Todos
                             <Badge variant="secondary" className="ml-auto bg-white">{documents.length}</Badge>
                         </button>
-                        {CATEGORIES.map(cat => (
-                            <button
-                                key={cat.id}
-                                onClick={() => setFilter(cat.id)}
-                                className={cn(
-                                    "w-full flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-md transition-all border border-transparent",
+                                {CATEGORIES.map(cat => (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => setFilter(cat.id)}
+                                        className={cn(
+                                            "w-full flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-md transition-all border border-transparent",
                                     filter === cat.id
                                         ? "bg-slate-50 text-[#0F2B45] border-l-4 border-l-[#0F2B45]"
                                         : "text-slate-700 hover:bg-slate-50"
@@ -196,12 +202,14 @@ export function TabDocuments({ patient }: { patient: FullPatientDetails }) {
                                 <cat.icon size={18} weight={filter === cat.id ? 'fill' : 'regular'} />
                                 {cat.label}
                             </button>
-                        ))}
+                                ))}
                     </div>
 
-                    <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 flex items-center gap-2">
-                        <WarningCircle weight="fill" /> 1 Doc vencido
-                    </div>
+                    {expiredCount > 0 && (
+                        <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 flex items-center gap-2">
+                            <WarningCircle weight="fill" /> {expiredCount} documento{expiredCount > 1 ? 's' : ''} vencido{expiredCount > 1 ? 's' : ''}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -230,6 +238,8 @@ export function TabDocuments({ patient }: { patient: FullPatientDetails }) {
                         </div>
                     ) : (
                         filteredDocs.map((doc: any) => {
+                            const expiresAt = doc.expires_at ? new Date(doc.expires_at) : null;
+                            const isExpired = expiresAt ? expiresAt.getTime() < Date.now() : false;
                             const visual = getFileIcon(doc.mime_type);
                             return (
                                 <div key={doc.id} className="group bg-white border border-slate-200 rounded-lg p-4 shadow-fluent hover:shadow-fluent-hover transition-all">
@@ -246,6 +256,11 @@ export function TabDocuments({ patient }: { patient: FullPatientDetails }) {
                                                     <span className="text-[9px] text-emerald-600 flex items-center gap-1 font-bold"><CheckCircle weight="fill"/> Validado</span> : 
                                                     <span className="text-[9px] text-amber-600 flex items-center gap-1 font-bold"><WarningCircle weight="fill"/> Pendente</span>
                                                 }
+                                                {expiresAt && (
+                                                    <Badge variant={isExpired ? "destructive" : "secondary"} className="text-[9px] px-1 py-0 h-4">
+                                                        {isExpired ? "Vencido" : `Válido até ${format(expiresAt, "dd/MM/yyyy")}`}
+                                                    </Badge>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
