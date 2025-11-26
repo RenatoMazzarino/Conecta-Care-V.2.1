@@ -14,6 +14,7 @@ import { TabAdministrative } from "./tabs/TabAdministrative";
 import { TabFinancial } from "./tabs/TabFinancial";
 import { TabDocuments } from "./tabs/TabDocuments";
 import { TabHistory } from "./tabs/TabHistory";
+import { TabHistoryAudit } from "@/components/patients/v2/tab-history-audit";
 
 const tabs = [
   { id: "general", label: "Visão Geral" },
@@ -81,7 +82,7 @@ export function PatientTabsLayout({ patient, embedded = false }: { patient: Full
           {activeTab === "administrative" && <TabAdministrative patient={patient} />}
           {activeTab === "financial" && <TabFinancial patient={patient} />}
           {activeTab === "documents" && <TabDocuments patient={patient} />}
-          {activeTab === "history" && <TabHistory patient={patient} />}
+          {activeTab === "history" && <TabHistoryAudit patient={patient} />}
         </div>
       </div>
     </>
