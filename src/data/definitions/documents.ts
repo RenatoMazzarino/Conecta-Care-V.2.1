@@ -9,7 +9,12 @@ export const PatientDocumentSchema = z.object({
   
   title: z.string().min(2, "Título obrigatório"),
   category: DocumentCategoryEnum,
+  subcategory: z.string().optional(),
+  origin: z.string().optional(), // Ficha, Prontuário...
   description: z.string().optional(),
+  status: z.enum(['Ativo', 'Arquivado']).optional(),
+  confidential: z.boolean().default(false),
+  clinical_visible: z.boolean().default(true),
   
   // Dados técnicos do arquivo (retornados pelo Storage)
   file_name: z.string(),
@@ -19,6 +24,7 @@ export const PatientDocumentSchema = z.object({
   
   expires_at: z.coerce.date().optional(),
   tags: z.array(z.string()).optional(),
+  created_at: z.coerce.date().optional(),
 });
 
 export type PatientDocumentDTO = z.infer<typeof PatientDocumentSchema>;

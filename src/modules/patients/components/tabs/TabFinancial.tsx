@@ -1,302 +1,313 @@
-'use client'
-/* eslint-disable react-hooks/incompatible-library */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+'use client';
 
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PatientFinancialProfileSchema, PatientFinancialProfileDTO, BondEnum, FinancialRecordDTO } from "@/data/definitions/financial";
+import { PatientFinancialProfileSchema, PatientFinancialProfileDTO, BondEnum } from "@/data/definitions/financial";
 import { upsertFinancialAction } from "../../actions.upsertFinancial";
 import { FullPatientDetails } from "../../patient.data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { 
-    Wallet, Receipt, SlidersHorizontal, FirstAid, Printer, DownloadSimple, 
-    Eye, Warning
-} from "@phosphor-icons/react";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { Lock, Wallet, Calculator, UserCircle, TrendUp, Plus } from "@phosphor-icons/react";
+import { addLedgerEntry, markLedgerPaid } from "@/app/(app)/patients/actions.financial";
 
-// --- HELPERS DE FORMATAÇÃO ---
-const formatCurrency = (value?: number | null) => {
-    if (value === undefined || value === null) return 'R$ 0,00';
-    return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const formatCurrency = (v?: number | null) => (v !== undefined && v !== null ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "R$ 0,00");
+const formatDate = (d?: string | Date | null) => (d ? format(new Date(d), "dd/MM/yyyy") : "—");
+
+type AddEntryForm = {
+  description: string;
+  amount: number;
+  dueDate: string;
+  paymentMethod?: string;
+  entryType?: string;
 };
 
-const formatDate = (value?: string | Date | null) => {
-    if (!value) return '—';
-    return format(new Date(value), 'dd/MM/yyyy');
-};
+function AddEntrySheet({ patientId, onDone }: { patientId: string; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<AddEntryForm>({ description: "", amount: 0, dueDate: "" });
 
-const statusTone: Record<string, string> = {
-    paid: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    pending: 'border-amber-300 bg-amber-50 text-amber-700',
-    overdue: 'border-rose-200 bg-rose-50 text-rose-700',
-    canceled: 'border-slate-200 bg-slate-50 text-slate-500',
-};
+  const handleSave = async () => {
+    if (!form.description || !form.dueDate) return toast.error("Preencha descrição e vencimento.");
+    setSaving(true);
+    const res = await addLedgerEntry({
+      patient_id: patientId,
+      description: form.description,
+      amount_due: form.amount,
+      due_date: form.dueDate,
+      entry_type: form.entryType,
+      payment_method: form.paymentMethod,
+    });
+    setSaving(false);
+    if (!res.success) return toast.error(res.error || "Erro ao salvar lançamento");
+    toast.success("Lançamento criado");
+    setOpen(false);
+    onDone();
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button size="sm" variant="outline"><Plus className="w-4 h-4 mr-1" /> Novo Lançamento Manual</Button>
+      </SheetTrigger>
+      <SheetContent className="sm:max-w-md space-y-4">
+        <SheetHeader><SheetTitle>Lançamento Manual</SheetTitle></SheetHeader>
+        <div className="space-y-3">
+          <div className="space-y-1"><FormLabel>Descrição</FormLabel><Input value={form.description} onChange={(e)=>setForm({...form, description: e.target.value})} /></div>
+          <div className="space-y-1"><FormLabel>Valor (R$)</FormLabel><Input type="number" value={form.amount} onChange={(e)=>setForm({...form, amount: Number(e.target.value)})} /></div>
+          <div className="space-y-1"><FormLabel>Vencimento</FormLabel><Input type="date" value={form.dueDate} onChange={(e)=>setForm({...form, dueDate: e.target.value})} /></div>
+          <div className="space-y-1"><FormLabel>Forma Pagto</FormLabel><Input value={form.paymentMethod || ""} onChange={(e)=>setForm({...form, paymentMethod: e.target.value})} /></div>
+        </div>
+        <SheetFooter className="flex gap-2">
+          <Button variant="outline" onClick={()=>setOpen(false)}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}
 
 export function TabFinancial({ patient }: { patient: FullPatientDetails }) {
-    // Dados vindos do Banco
-    const financial = (patient as any).financial?.[0] || {};
-    const ledger: FinancialRecordDTO[] = patient.ledger || [];
+  const adminInfo = (patient as any).admin_info?.[0] || {};
+  const financial = (patient as any).financial?.[0] || {};
+  const ledger: any[] = patient.ledger || [];
 
-    // Ordenar Ledger (Mais recente primeiro)
-    const sortedLedger = [...ledger].sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime());
+  const kpis = useMemo(() => {
+    const open = ledger.filter((l) => ["pending", "partial", "overdue"].includes(l.status)).reduce((s, l) => s + (Number(l.amount_due || 0) - Number(l.amount_paid || 0)), 0);
+    const overdue = ledger.filter((l) => l.status === "overdue").reduce((s, l) => s + (Number(l.amount_due || 0) - Number(l.amount_paid || 0)), 0);
+    const next = ledger
+      .filter((l) => ["pending", "partial"].includes(l.status))
+      .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())[0]?.due_date;
+    return { open, overdue, next };
+  }, [ledger]);
 
-    const form = useForm<PatientFinancialProfileDTO>({
-        resolver: zodResolver(PatientFinancialProfileSchema) as any,
-        defaultValues: {
-            patient_id: patient.id,
-            bond_type: financial.bond_type ?? 'Particular',
-            insurer_name: financial.insurer_name ?? '',
-            plan_name: financial.plan_name ?? '',
-            insurance_card_number: financial.insurance_card_number ?? '',
-            insurance_card_validity: financial.insurance_card_validity ? new Date(financial.insurance_card_validity) : undefined,
-            monthly_fee: financial.monthly_fee ?? 0,
-            billing_due_day: financial.billing_due_day ?? undefined,
-            payment_method: financial.payment_method ?? '',
-            billing_status: financial.billing_status ?? 'active',
-            notes: financial.notes ?? '',
-            financial_responsible_name: financial.financial_responsible_name ?? '',
-            financial_responsible_contact: financial.financial_responsible_contact ?? '',
-        }
-    });
+  const form = useForm<PatientFinancialProfileDTO>({
+    resolver: zodResolver(PatientFinancialProfileSchema) as any,
+    defaultValues: {
+      patient_id: patient.id,
+      bond_type: financial.bond_type ?? "Particular",
+      insurer_name: financial.insurer_name ?? "",
+      plan_name: financial.plan_name ?? "",
+      insurance_card_number: financial.insurance_card_number ?? "",
+      insurance_card_validity: financial.insurance_card_validity ? new Date(financial.insurance_card_validity) : undefined,
+      monthly_fee: financial.monthly_fee ?? 0,
+      billing_due_day: financial.billing_due_day ?? undefined,
+      payment_method: financial.payment_method ?? "",
+      billing_status: financial.billing_status ?? "active",
+      notes: financial.notes ?? "",
+      card_holder_name: financial.card_holder_name ?? "",
+      billing_model: financial.billing_model ?? "",
+      billing_base_value: financial.billing_base_value ?? 0,
+      billing_periodicity: financial.billing_periodicity ?? "",
+      copay_percent: financial.copay_percent ?? 0,
+      readjustment_index: financial.readjustment_index ?? "",
+      readjustment_month: financial.readjustment_month ?? undefined,
+      late_fee_percent: financial.late_fee_percent ?? 0,
+      daily_interest_percent: financial.daily_interest_percent ?? 0,
+      discount_early_payment: financial.discount_early_payment ?? 0,
+      discount_days_limit: financial.discount_days_limit ?? undefined,
+      financial_responsible_name: financial.financial_responsible_name ?? "",
+      financial_responsible_contact: financial.financial_responsible_contact ?? "",
+      payer_relation: financial.payer_relation ?? "",
+      billing_email_list: financial.billing_email_list ?? "",
+      billing_phone: financial.billing_phone ?? "",
+      invoice_delivery_method: financial.invoice_delivery_method ?? "",
+    },
+  });
 
-    // Cálculos Rápidos
-    const totalPending = ledger
-        .filter(l => l.status === 'pending' || l.status === 'overdue')
-        .reduce((acc, curr) => acc + Number(curr.amount), 0);
+  async function onSubmit(data: PatientFinancialProfileDTO) {
+    const payload = {
+      ...data,
+      insurance_card_validity:
+        data.insurance_card_validity instanceof Date ? format(data.insurance_card_validity, "yyyy-MM-dd") as any : data.insurance_card_validity,
+    };
+    const res = await upsertFinancialAction(payload);
+    if (res.success) toast.success("Perfil financeiro atualizado!");
+    else toast.error(res.error || "Erro ao salvar.");
+  }
 
-    async function onSubmit(data: PatientFinancialProfileDTO) {
-        // Tratamento de data para string ISO
-        const payload = {
-            ...data,
-            insurance_card_validity: data.insurance_card_validity instanceof Date 
-                ? format(data.insurance_card_validity, 'yyyy-MM-dd') as any 
-                : data.insurance_card_validity
-        };
+  const savePayment = async (id: string, amount: number) => {
+    const res = await markLedgerPaid(id, amount, new Date().toISOString());
+    if (!res.success) return toast.error(res.error || "Erro ao registrar pagamento");
+    toast.success("Pagamento registrado");
+    window.location.reload();
+  };
 
-        const res = await upsertFinancialAction(payload);
-        if (res.success) toast.success("Perfil financeiro atualizado!");
-        else toast.error("Erro: " + res.error);
-    }
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-16">
+        {/* Espelho admin (read-only) */}
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-slate-600">
+            <Lock className="w-4 h-4" /> Informações do contrato (somente leitura - editar na aba Administrativo)
+          </div>
+          <div className="grid grid-cols-4 gap-3 text-sm w-full">
+            <div>
+              <p className="text-[10px] uppercase text-slate-500">Origem</p>
+              <p className="font-semibold text-slate-800">{adminInfo.demand_origin || "N/D"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase text-slate-500">Vigência</p>
+              <p className="font-semibold text-slate-800">
+                {adminInfo.start_date ? formatDate(adminInfo.start_date) : "—"} até {adminInfo.contract_end_date ? formatDate(adminInfo.contract_end_date) : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase text-slate-500">Status</p>
+              <Badge className="bg-slate-200 text-slate-700">{adminInfo.status || "N/D"}</Badge>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase text-slate-500">ID Externo</p>
+              <p className="font-semibold text-slate-800">{adminInfo.external_contract_id || "—"}</p>
+            </div>
+          </div>
+        </div>
 
-    const watchedBondType = form.watch('bond_type');
-    const insurerName = form.watch('insurer_name') || 'Sem Convênio';
-    const planName = form.watch('plan_name') || 'Plano não informado';
-    const insuranceCardNumber = form.watch('insurance_card_number') || '•••• •••• ••••';
-    const insuranceCardValidity = form.watch('insurance_card_validity');
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="xl:col-span-2 space-y-4">
+            <Card className="shadow-fluent border-slate-200">
+              <CardHeader className="border-b border-slate-100">
+                <CardTitle className="flex items-center gap-2 text-base text-[#0F2B45]"><Calculator className="w-5 h-5" /> Regras de Faturamento</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-4">
+                <div className="grid grid-cols-3 gap-3">
+                  <FormField control={form.control} name="billing_model" render={({ field }) => (
+                    <FormItem><FormLabel>Modelo</FormLabel><FormControl><Input {...field} placeholder="Mensalidade, Diária" /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="billing_base_value" render={({ field }) => (
+                    <FormItem><FormLabel>Valor Base</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e)=>field.onChange(Number(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="billing_periodicity" render={({ field }) => (
+                    <FormItem><FormLabel>Periodicidade</FormLabel><FormControl><Input {...field} placeholder="Mensal, Quinzenal" /></FormControl></FormItem>
+                  )} />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <FormField control={form.control} name="billing_due_day" render={({ field }) => (
+                    <FormItem><FormLabel>Dia Venc.</FormLabel><FormControl><Input type="number" min={1} max={31} value={field.value ?? ""} onChange={(e)=>field.onChange(e.target.value ? Number(e.target.value) : undefined)} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="payment_method" render={({ field }) => (
+                    <FormItem><FormLabel>Forma Pagto</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="payment_terms" render={({ field }) => (
+                    <FormItem><FormLabel>Condições</FormLabel><FormControl><Input {...field} placeholder="Texto livre" /></FormControl></FormItem>
+                  )} />
+                </div>
+                <div className="grid grid-cols-4 gap-3">
+                  <FormField control={form.control} name="late_fee_percent" render={({ field }) => (
+                    <FormItem><FormLabel>Multa %</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e)=>field.onChange(Number(e.target.value))} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="daily_interest_percent" render={({ field }) => (
+                    <FormItem><FormLabel>Juros/dia %</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={(e)=>field.onChange(Number(e.target.value))} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="readjustment_index" render={({ field }) => (
+                    <FormItem><FormLabel>Índice reajuste</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="readjustment_month" render={({ field }) => (
+                    <FormItem><FormLabel>Mês base</FormLabel><FormControl><Input type="number" min={1} max={12} value={field.value ?? ""} onChange={(e)=>field.onChange(e.target.value ? Number(e.target.value) : undefined)} /></FormControl></FormItem>
+                  )} />
+                </div>
+              </CardContent>
+            </Card>
 
-    return (
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-12 gap-6 pb-20">
-                
-                <div className="col-span-12 lg:col-span-5 space-y-5">
-                    {/* Cartão Virtual */}
-                    <div className="relative overflow-hidden rounded-lg border border-white/20 bg-gradient-to-br from-[#0F2B45] to-[#1B4B7A] p-6 text-white shadow-fluent">
-                        <div className="flex items-start justify-between">
-                            <span className="rounded border border-white/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em]">
-                                {watchedBondType}
-                            </span>
-                            <FirstAid className="h-6 w-6 opacity-80" />
-                        </div>
-                        <div className="mt-6 space-y-1">
-                            <p className="text-[10px] uppercase opacity-80">Operadora</p>
-                            <p className="text-2xl font-bold tracking-wide">{insurerName}</p>
-                            <p className="text-sm font-medium opacity-90">{planName}</p>
-                        </div>
-                        <div className="mt-6 flex flex-wrap items-end justify-between gap-4 text-sm">
-                            <div>
-                                <p className="text-[10px] uppercase opacity-80">Carteirinha</p>
-                                <p className="font-mono text-lg tracking-widest">{insuranceCardNumber}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-[10px] uppercase opacity-80">Validade</p>
-                                <p className="font-bold">{formatDate(insuranceCardValidity)}</p>
-                            </div>
-                        </div>
-                    </div>
+            <Card className="shadow-fluent border-slate-200">
+              <CardHeader className="border-b border-slate-100">
+                <CardTitle className="flex items-center gap-2 text-base text-[#0F2B45]"><UserCircle className="w-5 h-5" /> Responsável Financeiro</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField control={form.control} name="financial_responsible_name" render={({ field }) => (
+                    <FormItem><FormLabel>Nome/Razão Social</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="payer_relation" render={({ field }) => (
+                    <FormItem><FormLabel>CPF/CNPJ ou Relação</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  )} />
+                </div>
+                <FormField control={form.control} name="billing_email_list" render={({ field }) => (
+                  <FormItem><FormLabel>Emails de cobrança (;)</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                )} />
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField control={form.control} name="billing_phone" render={({ field }) => (
+                    <FormItem><FormLabel>Telefone cobrança</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="invoice_delivery_method" render={({ field }) => (
+                    <FormItem><FormLabel>Método envio</FormLabel><FormControl><Input {...field} placeholder="Portal / Email / Correio" /></FormControl></FormItem>
+                  )} />
+                </div>
+                <FormField control={form.control} name="notes" render={({ field }) => (
+                  <FormItem><FormLabel>Observações</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>
+                )} />
+              </CardContent>
+            </Card>
+          </div>
 
-                    {/* Regras de faturamento */}
-                    <Card className="bg-white border border-slate-200 rounded-md shadow-fluent">
-                        <CardHeader className="border-b border-slate-100 pb-3">
-                            <CardTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[#0F2B45]">
-                                <SlidersHorizontal size={18} /> Regras de Faturamento
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-4 space-y-4">
-                            <div className="grid grid-cols-2 gap-3">
-                                <FormField control={form.control} name="bond_type" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Vínculo</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl><SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger></FormControl>
-                                            <SelectContent>{BondEnum.options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
-                                        </Select>
-                                    </FormItem>
-                                )} />
-                                
-                                <FormField control={form.control} name="monthly_fee" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Mensalidade (R$)</FormLabel>
-                                        <FormControl><Input type="number" className="h-9 text-sm" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
-                                    </FormItem>
-                                )} />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <FormField control={form.control} name="billing_due_day" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Dia Venc.</FormLabel>
-                                        <FormControl>
-                                          <Input
-                                            type="number"
-                                            min={1}
-                                            max={31}
-                                            value={field.value ?? ""}
-                                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                                            className="h-9 text-sm"
-                                          />
-                                        </FormControl>
-                                    </FormItem>
-                                )} />
-                                
-                                <FormField control={form.control} name="billing_status" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Status</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl><SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="active">Ativo</SelectItem>
-                                                <SelectItem value="suspended">Suspenso</SelectItem>
-                                                <SelectItem value="defaulting">Inadimplente</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </FormItem>
-                                )} />
-                            </div>
-
-                            <FormField control={form.control} name="payment_method" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Forma de Pagamento</FormLabel>
-                                    <FormControl><Input {...field} className="h-9 text-sm" placeholder="Boleto / Transferência / Pix" /></FormControl>
-                                </FormItem>
-                            )} />
-
-                            <FormField control={form.control} name="notes" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Observações</FormLabel>
-                                    <FormControl><Textarea {...field} className="text-sm" placeholder="Notas internas sobre a cobrança..." /></FormControl>
-                                </FormItem>
-                            )} />
-                        </CardContent>
-                    </Card>
-
-                    {/* Responsável */}
-                    <Card className="bg-white border border-slate-200 rounded-md shadow-fluent">
-                        <CardHeader className="border-b border-slate-100 pb-3">
-                            <CardTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[#0F2B45]">
-                                <Wallet size={18} /> Responsável Financeiro
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-4 space-y-3">
-                            <FormField control={form.control} name="financial_responsible_name" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Nome Completo</FormLabel>
-                                    <FormControl><Input {...field} className="h-9 text-sm" /></FormControl>
-                                </FormItem>
-                            )} />
-                            <FormField control={form.control} name="financial_responsible_contact" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Contato (Tel/Email)</FormLabel>
-                                    <FormControl><Input {...field} className="h-9 text-sm" /></FormControl>
-                                </FormItem>
-                            )} />
-                        </CardContent>
-                    </Card>
+          <div className="space-y-4">
+            <Card className="shadow-fluent border-slate-200">
+              <CardHeader className="flex items-center justify-between border-b border-slate-100">
+                <CardTitle className="flex items-center gap-2 text-base text-[#0F2B45]"><TrendUp className="w-5 h-5" /> Conta Corrente</CardTitle>
+                <AddEntrySheet patientId={patient.id} onDone={() => window.location.reload()} />
+              </CardHeader>
+              <CardContent className="space-y-3 pt-4">
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div className="p-3 rounded border border-slate-200 bg-slate-50">
+                    <p className="text-[10px] text-slate-500 uppercase">Em aberto</p>
+                    <p className="font-bold text-slate-900">{formatCurrency(kpis.open)}</p>
+                  </div>
+                  <div className="p-3 rounded border border-rose-200 bg-rose-50">
+                    <p className="text-[10px] text-rose-700 uppercase">Vencido</p>
+                    <p className="font-bold text-rose-700">{formatCurrency(kpis.overdue)}</p>
+                  </div>
+                  <div className="p-3 rounded border border-slate-200 bg-slate-50">
+                    <p className="text-[10px] text-slate-500 uppercase">Próx. venc.</p>
+                    <p className="font-bold text-slate-900">{kpis.next ? formatDate(kpis.next) : "—"}</p>
+                  </div>
                 </div>
 
-                {/* Extrato */}
-                <div className="col-span-12 lg:col-span-7">
-                    <Card className="flex h-full flex-col bg-white border border-slate-200 rounded-md shadow-fluent">
-                        <CardHeader className="border-b border-slate-100 pb-3 flex flex-row items-center justify-between">
-                            <CardTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[#0F2B45]">
-                                <Receipt size={18} /> Extrato Financeiro
-                            </CardTitle>
-                            <div className="flex gap-2">
-                                <Button type="button" variant="outline" size="sm" className="h-8 text-xs"><Printer className="mr-2"/> Imprimir</Button>
-                                <Button type="button" variant="outline" size="sm" className="h-8 text-xs"><DownloadSimple className="mr-2"/> Exportar</Button>
-                            </div>
-                        </CardHeader>
-
-                        <CardContent className="p-0 flex-1">
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full text-xs">
-                                    <thead className="bg-slate-50 uppercase text-slate-500 font-semibold">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left">Vencimento</th>
-                                            <th className="px-4 py-3 text-left">Descrição</th>
-                                            <th className="px-4 py-3 text-center">Status</th>
-                                            <th className="px-4 py-3 text-right">Valor</th>
-                                            <th className="px-4 py-3 text-center">Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {sortedLedger.length === 0 ? (
-                                            <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400">Nenhum lançamento encontrado.</td></tr>
-                                        ) : (
-                                            sortedLedger.map((item) => (
-                                                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                                                    <td className="px-4 py-3 text-slate-600 font-medium">{formatDate(item.due_date)}</td>
-                                                    <td className="px-4 py-3 text-slate-800">{item.description || 'Fatura Mensal'}</td>
-                                                    <td className="px-4 py-3 text-center">
-                                                        <Badge variant="outline" className={statusTone[item.status] || statusTone.pending}>
-                                                            {item.status === 'paid' ? 'Pago' : item.status === 'overdue' ? 'Atrasado' : 'Pendente'}
-                                                        </Badge>
-                                                    </td>
-                                                    <td className={cn("px-4 py-3 text-right font-bold", item.type === 'payable' ? 'text-rose-600' : 'text-[#0F2B45]')}>
-                                                        {formatCurrency(Number(item.amount))}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center">
-                                                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-[#0F2B45]">
-                                                            <Eye />
-                                                        </Button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </CardContent>
-
-                        <div className="flex flex-wrap justify-end gap-8 border-t border-slate-200 bg-slate-50 px-6 py-4 text-right text-sm rounded-b-lg">
-                            {totalPending > 0 && (
-                                <div className="flex items-center gap-2 mr-auto text-rose-600 font-bold text-xs bg-rose-50 px-3 py-1 rounded border border-rose-100">
-                                    <Warning size={16} weight="fill" /> Pendências em aberto
-                                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-slate-600">Lançamentos</p>
+                  </div>
+                  {ledger.length === 0 ? (
+                    <div className="text-xs text-slate-500">Nenhum lançamento.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {ledger.slice(0, 8).map((l) => (
+                        <div key={l.id} className="flex items-center justify-between rounded border border-slate-100 px-3 py-2">
+                          <div className="space-y-0.5">
+                            <p className="text-sm font-semibold text-slate-800">{l.description}</p>
+                            <p className="text-[11px] text-slate-500 flex gap-3">
+                              <span>Venc: {formatDate(l.due_date)}</span>
+                              <span>Valor: {formatCurrency(l.amount_due)}</span>
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge className={l.status === "paid" ? "bg-emerald-100 text-emerald-700" : l.status === "overdue" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-800"}>
+                              {l.status}
+                            </Badge>
+                            {l.status !== "paid" && (
+                              <Button size="sm" variant="outline" onClick={() => savePayment(l.id, Number(l.amount_due || 0))}>
+                                Registrar pagamento
+                              </Button>
                             )}
-                            <div>
-                                <p className="text-[10px] font-bold uppercase text-slate-500">Total Pendente</p>
-                                <p className={cn("text-lg font-bold", totalPending > 0 ? "text-rose-600" : "text-emerald-600")}>
-                                    {formatCurrency(totalPending)}
-                                </p>
-                            </div>
+                          </div>
                         </div>
-                    </Card>
+                      ))}
+                    </div>
+                  )}
                 </div>
-
-                <div className="fixed bottom-6 right-8 shadow-2xl z-50">
-                    <Button type="submit" className="bg-[#D46F5D] hover:bg-[#c05846] text-white px-6 py-4 rounded-full font-bold flex items-center gap-2 shadow-lg">
-                        Salvar Perfil Financeiro
-                    </Button>
-                </div>
-            </form>
-        </Form>
-    );
+              </CardContent>
+            </Card>
+            <Button type="submit" className="w-full bg-[#0F2B45] text-white">Salvar alterações</Button>
+          </div>
+        </div>
+      </form>
+    </Form>
+  );
 }

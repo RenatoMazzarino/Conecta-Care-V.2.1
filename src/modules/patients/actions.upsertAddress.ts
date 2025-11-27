@@ -1,108 +1,128 @@
 'use server'
 
 import { createClient } from "@/lib/supabase/server";
-import { PatientAddressSchema, PatientAddressDTO } from "@/data/definitions/address";
 import { revalidatePath } from "next/cache";
 import { logSystemAction } from "../admin/audit.service";
+import { PatientAddressZ, PatientAddressForm } from "@/schemas/patient.address";
 
-export async function upsertAddressAction(data: PatientAddressDTO) {
+export async function upsertAddressAction(data: PatientAddressForm) {
   const supabase = await createClient();
 
-  // 1. Validação Zod
-  const parsed = PatientAddressSchema.safeParse(data);
+  const parsed = PatientAddressZ.safeParse(data);
   if (!parsed.success) {
     console.error("Erro validação address:", parsed.error);
     return { success: false, error: "Dados inválidos. Verifique os campos obrigatórios." };
   }
-  
-  const form = parsed.data;
-  const patientId = form.patient_id;
 
-  // 2. Upsert Endereço (Tabela 1)
+  const input = parsed.data;
+  const patientId = input.patientId;
+
+  const addressPayload = {
+    patient_id: patientId,
+    zip_code: input.zipCode,
+    street: input.addressLine,
+    number: input.number,
+    neighborhood: input.neighborhood,
+    city: input.city,
+    state: input.state,
+    complement: input.complement,
+    reference_point: input.referencePoint,
+    zone_type: input.zoneType,
+    travel_notes: input.travelNotes,
+    geo_lat: input.geoLat,
+    geo_lng: input.geoLng,
+    property_type: input.propertyType,
+    condo_name: input.condoName,
+    block_tower: input.blockTower,
+    floor_number: input.floorNumber,
+    unit_number: input.unitNumber,
+    elevator_status: input.elevatorStatus,
+    wheelchair_access: input.wheelchairAccess,
+    street_access_type: input.streetAccessType,
+    parking: input.parking,
+    team_parking: input.teamParking,
+    has_24h_concierge: input.has24hConcierge,
+    concierge_contact: input.conciergeContact,
+    entry_procedure: input.entryProcedure,
+    night_access_risk: input.nightAccessRisk,
+    area_risk_type: input.areaRiskType,
+    works_or_obstacles: input.worksOrObstacles,
+    cell_signal_quality: input.cellSignalQuality,
+    power_outlets_desc: input.powerOutletsDesc,
+    equipment_space: input.equipmentSpace,
+    water_source: input.waterSource,
+    electric_infra: input.electricInfra,
+    backup_power: input.backupPower,
+    adapted_bathroom: input.adaptedBathroom,
+    stay_location: input.stayLocation,
+    pets: input.pets,
+    notes: input.notes,
+    updated_at: new Date().toISOString(),
+  };
+
   const { error: addrError } = await supabase
     .from('patient_addresses')
-    .upsert({
-      patient_id: patientId,
-      street: form.street,
-      number: form.number,
-      complement: form.complement,
-      neighborhood: form.neighborhood,
-      city: form.city,
-      state: form.state,
-      zip_code: form.zip_code,
-      reference_point: form.reference_point,
-      zone_type: form.zone_type,
-      travel_notes: form.travel_notes,
-      // facade_image_url: form.facade_image_url, // Se tiver upload no futuro
-    }, { onConflict: 'patient_id' });
+    .upsert(addressPayload, { onConflict: 'patient_id' });
 
   if (addrError) {
     console.error("Erro ao salvar endereço:", addrError);
     return { success: false, error: "Erro ao salvar endereço base." };
   }
 
-  // 3. Upsert Domicílio (Tabela 2 - Infraestrutura)
+  // Domicílio (infraestrutura legada)
+  const domicilePayload = {
+    patient_id: patientId,
+    ambulance_access: input.ambulanceAccess,
+    team_parking: input.teamParking,
+    night_access_risk: input.nightAccessRisk,
+    entry_procedure: input.entryProcedure,
+    bed_type: input.bedType,
+    mattress_type: input.mattressType,
+    voltage: input.voltage,
+    backup_power_source: input.backupPowerSource,
+    water_source: input.waterSource,
+    has_wifi: input.hasWifi,
+    has_smokers: input.hasSmokers,
+    pets_description: input.petsDescription,
+    animals_behavior: input.animalsBehavior,
+    general_observations: input.generalObservations,
+  };
+
   const { error: domError } = await supabase
     .from('patient_domiciles')
-    .upsert({
-      patient_id: patientId,
-      ambulance_access: form.ambulance_access,
-      team_parking: form.team_parking,
-      night_access_risk: form.night_access_risk,
-      entry_procedure: form.entry_procedure,
-      
-      bed_type: form.bed_type,
-      mattress_type: form.mattress_type,
-      voltage: form.voltage,
-      backup_power_source: form.backup_power_source,
-      has_wifi: form.has_wifi,
-      water_source: form.water_source,
-      
-      has_smokers: form.has_smokers,
-      pets_description: form.pets_description,
-      animals_behavior: form.animals_behavior,
-      general_observations: form.general_observations,
-    }, { onConflict: 'patient_id' });
+    .upsert(domicilePayload, { onConflict: 'patient_id' });
 
   if (domError) {
     console.error("Erro ao salvar domicílio:", domError);
     return { success: false, error: "Erro ao salvar dados de domicílio." };
   }
 
-  // 4. Atualizar Membros da Casa (Tabela 3 - Lista)
-  // Estratégia: Se o array vier preenchido, substituímos a lista antiga.
-  if (form.household_members) {
-    // Remove antigos
+  if (input.householdMembers) {
     await supabase.from('patient_household_members').delete().eq('patient_id', patientId);
-    
-    // Insere novos (se houver)
-    if (form.household_members.length > 0) {
-        const membersToInsert = form.household_members.map(m => ({
-            patient_id: patientId,
-            name: m.name,
-            role: m.role,
-            type: m.type,
-            schedule_note: m.schedule_note
-        }));
-        
-        const { error: memberError } = await supabase
-            .from('patient_household_members')
-            .insert(membersToInsert);
-            
-        if (memberError) {
-            console.error("Erro ao salvar membros:", memberError);
-            return { success: false, error: "Erro ao salvar familiares." };
-        }
+    if (input.householdMembers.length > 0) {
+      const membersToInsert = input.householdMembers.map((m) => ({
+        patient_id: patientId,
+        name: m.name,
+        role: m.role,
+        type: m.type,
+        schedule_note: m.scheduleNote,
+      }));
+      const { error: memberError } = await supabase
+        .from('patient_household_members')
+        .insert(membersToInsert);
+      if (memberError) {
+        console.error("Erro ao salvar membros:", memberError);
+        return { success: false, error: "Erro ao salvar familiares." };
+      }
     }
   }
 
-  // 5. Sucesso
   try {
     await logSystemAction({
       action: "UPDATE",
       entity: "patient_addresses",
       entityId: patientId,
-      changes: { payload: { old: null, new: form } },
+      changes: { payload: { old: null, new: addressPayload } },
       reason: "Atualização via Portal Administrativo",
     });
   } catch (logErr) {

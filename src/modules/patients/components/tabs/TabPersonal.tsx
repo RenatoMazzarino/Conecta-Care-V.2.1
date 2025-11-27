@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable react-hooks/incompatible-library */
 
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PatientPersonalSchema, PatientPersonalDTO } from "@/data/definitions/personal";
 import { upsertPersonalAction } from "../../actions.upsertPersonal";
@@ -9,29 +9,21 @@ import { FullPatientDetails } from "../../patient.data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import {
-  IdentificationBadge,
-  Phone,
-  Gavel,
-  CheckCircle,
-  WhatsappLogo,
-  FloppyDisk,
-  WarningCircle,
-  IdentificationCard,
-} from "@phosphor-icons/react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 
 export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
-  const legalGuardian = patient.contacts?.find((c) => c?.is_legal_representative);
-
   const form = useForm<PatientPersonalDTO>({
     resolver: zodResolver(PatientPersonalSchema) as any,
     defaultValues: {
       patient_id: patient.id,
       full_name: patient.full_name ?? "",
+      nickname: patient.nickname ?? "",
+      display_name: patient.display_name ?? "",
       social_name: patient.social_name ?? "",
       salutation: patient.salutation ?? "",
       pronouns: patient.pronouns ?? "",
@@ -39,15 +31,21 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
       cpf_status: patient.cpf_status ?? "valid",
       rg: patient.rg ?? "",
       rg_issuer: patient.rg_issuer ?? "",
+      rg_issuer_state: patient.rg_issuer_state ?? "",
+      rg_issued_at: patient.rg_issued_at ? new Date(patient.rg_issued_at) : undefined,
       cns: patient.cns ?? "",
       national_id: patient.national_id ?? "",
       document_validation_method: patient.document_validation_method ?? "manual",
+      doc_validation_status: (patient.doc_validation_status as any) ?? "Pendente",
       date_of_birth: patient.date_of_birth ? new Date(patient.date_of_birth) : undefined,
       gender: patient.gender ?? "Other",
       gender_identity: patient.gender_identity ?? "",
       civil_status: patient.civil_status ?? "",
       nationality: patient.nationality ?? "Brasileira",
       place_of_birth: patient.place_of_birth ?? "",
+      place_of_birth_city: patient.place_of_birth_city ?? "",
+      place_of_birth_state: patient.place_of_birth_state ?? "",
+      place_of_birth_country: patient.place_of_birth_country ?? "Brasil",
       preferred_language: patient.preferred_language ?? "Português",
       mother_name: patient.mother_name ?? "",
       photo_consent: patient.photo_consent ?? false,
@@ -58,7 +56,26 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
       accept_sms: patient.accept_sms ?? true,
       accept_email: patient.accept_email ?? true,
       block_marketing: patient.block_marketing ?? false,
+      education_level: patient.education_level ?? "",
+      profession: patient.profession ?? "",
+      race_color: (patient.race_color as any) ?? "Não declarado",
+      is_pcd: patient.is_pcd ?? false,
+      contact_time_preference: (patient.contact_time_preference as any) ?? "Comercial",
+      contact_notes: patient.contact_notes ?? "",
+      civil_documents: patient.civil_documents?.map((doc: any) => ({
+        id: doc.id,
+        doc_type: doc.doc_type || doc.docType || "",
+        doc_number: doc.doc_number || doc.docNumber || "",
+        issuer: doc.issuer,
+        issued_at: doc.issued_at || doc.issuedAt,
+        valid_until: doc.valid_until || doc.validUntil,
+      })) ?? [],
     },
+  });
+
+  const documents = useFieldArray({
+    control: form.control,
+    name: "civil_documents",
   });
 
   async function onSubmit(data: PatientPersonalDTO) {
@@ -67,518 +84,290 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
     else toast.error(res.error);
   }
 
-  const labelCls = "text-xs font-bold uppercase text-slate-500";
-  const inputCls = "h-9 text-sm";
-  const validationMethod = (form.watch("document_validation_method") || "").toUpperCase();
+  const labelCls = "text-[11px] font-semibold text-slate-600 uppercase";
+  const inputCls = "h-9 text-sm bg-white";
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-12 gap-6 pb-20">
-        {/* COLUNA ESQUERDA */}
-        <div className="col-span-12 lg:col-span-8 space-y-6">
-          {/* Identidade */}
-          <div className="bg-white border border-slate-200 rounded-md shadow-fluent p-6">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-4 text-[#0F2B45] font-bold text-base">
-              <IdentificationCard size={22} weight="duotone" /> Identidade Civil & Social
-            </div>
-            <div className="grid grid-cols-12 gap-4">
-              <div className="col-span-3">
-                <FormField
-                  control={form.control}
-                  name="salutation"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Tratamento</FormLabel>
-                      <FormControl>
-                        <Input {...field} className={inputCls} placeholder="Sr(a)." />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-9 md:col-span-5">
-                <FormField
-                  control={form.control}
-                  name="full_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Nome Completo</FormLabel>
-                      <FormControl>
-                        <Input {...field} className={`${inputCls} bg-slate-50 font-semibold`} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-12 md:col-span-4">
-                <FormField
-                  control={form.control}
-                  name="social_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Nome Social</FormLabel>
-                      <FormControl>
-                        <Input {...field} className={inputCls} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-6 md:col-span-3">
-                <FormField
-                  control={form.control}
-                  name="date_of_birth"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Data de Nasc.</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          className={inputCls}
-                          value={field.value ? format(field.value, "yyyy-MM-dd") : ""}
-                          onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-6 md:col-span-3">
-                <FormField
-                  control={form.control}
-                  name="gender"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Sexo Biológico</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className={inputCls}>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="M">Masculino</SelectItem>
-                          <SelectItem value="F">Feminino</SelectItem>
-                          <SelectItem value="Other">Outro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-6 md:col-span-3">
-                <FormField
-                  control={form.control}
-                  name="pronouns"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Pronomes</FormLabel>
-                      <FormControl>
-                        <Input {...field} className={inputCls} placeholder="Ela/Dela" />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-6 md:col-span-3">
-                <FormField
-                  control={form.control}
-                  name="civil_status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Estado Civil</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className={inputCls}>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Solteiro">Solteiro(a)</SelectItem>
-                          <SelectItem value="Casado">Casado(a)</SelectItem>
-                          <SelectItem value="Viúvo">Viúvo(a)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-12 md:col-span-6">
-                <FormField
-                  control={form.control}
-                  name="mother_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Nome da Mãe</FormLabel>
-                      <FormControl>
-                        <Input {...field} className={inputCls} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-6 md:col-span-3">
-                <FormField
-                  control={form.control}
-                  name="nationality"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Nacionalidade</FormLabel>
-                      <FormControl>
-                        <Input {...field} className={inputCls} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-6 md:col-span-3">
-                <FormField
-                  control={form.control}
-                  name="place_of_birth"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Naturalidade</FormLabel>
-                      <FormControl>
-                        <Input {...field} className={inputCls} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-6 md:col-span-3">
-                <FormField
-                  control={form.control}
-                  name="gender_identity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Identidade de Gênero</FormLabel>
-                      <FormControl>
-                        <Input {...field} className={inputCls} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-6 md:col-span-3">
-                <FormField
-                  control={form.control}
-                  name="preferred_language"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Idioma Preferido</FormLabel>
-                      <FormControl>
-                        <Input {...field} className={inputCls} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-12">
-                <FormField
-                  control={form.control}
-                  name="photo_consent"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                      <FormControl>
-                        <Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} />
-                      </FormControl>
-                      <FormLabel className="text-xs font-semibold text-slate-600">
-                        Consentimento para uso de foto no prontuário e crachá.
-                      </FormLabel>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-          </div>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-10">
+        <Card className="shadow-fluent border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-base text-[#0F2B45]">Identidade Civil & Social</CardTitle>
+            <CardDescription>Campos essenciais do prontuário.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <FormField control={form.control} name="full_name" render={({ field }) => (
+              <FormItem className="md:col-span-8 col-span-12">
+                <FormLabel className={labelCls}>Nome Completo *</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="nickname" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>Apelido</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="social_name" render={({ field }) => (
+              <FormItem className="md:col-span-6 col-span-12">
+                <FormLabel className={labelCls}>Nome Social</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="date_of_birth" render={({ field }) => (
+              <FormItem className="md:col-span-3 col-span-6">
+                <FormLabel className={labelCls}>Data de Nascimento *</FormLabel>
+                <FormControl>
+                  <Input type="date" value={field.value ? format(field.value, "yyyy-MM-dd") : ""} onChange={(e)=>field.onChange(e.target.value ? new Date(e.target.value):undefined)} className={inputCls}/>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="gender" render={({ field }) => (
+              <FormItem className="md:col-span-3 col-span-6">
+                <FormLabel className={labelCls}>Sexo *</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl><SelectTrigger className={inputCls}><SelectValue /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="M">Masculino</SelectItem>
+                    <SelectItem value="F">Feminino</SelectItem>
+                    <SelectItem value="Other">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="race_color" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>Raça/Cor</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl><SelectTrigger className={inputCls}><SelectValue /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="Branca">Branca</SelectItem>
+                    <SelectItem value="Preta">Preta</SelectItem>
+                    <SelectItem value="Parda">Parda</SelectItem>
+                    <SelectItem value="Amarela">Amarela</SelectItem>
+                    <SelectItem value="Indígena">Indígena</SelectItem>
+                    <SelectItem value="Não declarado">Não declarado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="education_level" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>Escolaridade</FormLabel>
+                <FormControl><Input {...field} className={inputCls} placeholder="Fundamental, Médio, Superior..." /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="profession" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>Profissão</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="is_pcd" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12 flex items-center space-x-2">
+                <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                <FormLabel className="text-xs font-semibold text-slate-600 uppercase">Pessoa com Deficiência?</FormLabel>
+              </FormItem>
+            )}/>
+          </CardContent>
+        </Card>
 
-          {/* Documentação */}
-          <div className="bg-white border border-slate-200 rounded-md shadow-fluent p-6">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 text-[#0F2B45] font-bold text-base">
-              <div className="flex items-center gap-2">
-                <IdentificationBadge size={22} weight="duotone" /> Documentação Civil
-              </div>
-              <span className="rounded border border-blue-100 bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700">
-                Validação: {validationMethod}
-              </span>
-            </div>
-            <div className="grid grid-cols-12 gap-4">
-              <div className="col-span-12 md:col-span-4">
-                <FormField
-                  control={form.control}
-                  name="cpf"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>CPF</FormLabel>
-                      <FormControl>
-                        <Input {...field} className={`${inputCls} font-mono`} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-6 md:col-span-3">
-                <FormField
-                  control={form.control}
-                  name="rg"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>RG</FormLabel>
-                      <FormControl>
-                        <Input {...field} className={inputCls} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-6 md:col-span-2">
-                <FormField
-                  control={form.control}
-                  name="rg_issuer"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Órgão</FormLabel>
-                      <FormControl>
-                        <Input {...field} className={inputCls} placeholder="SSP" />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-12 md:col-span-3">
-                <FormField
-                  control={form.control}
-                  name="cpf_status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Status CPF</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className={inputCls}>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="valid">Válido</SelectItem>
-                          <SelectItem value="pending">Pendente</SelectItem>
-                          <SelectItem value="invalid">Inválido</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-12 md:col-span-4">
-                <FormField
-                  control={form.control}
-                  name="cns"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Cartão SUS (CNS)</FormLabel>
-                      <FormControl>
-                        <Input {...field} className={`${inputCls} font-mono bg-blue-50/30 text-blue-900`} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-6 md:col-span-4">
-                <FormField
-                  control={form.control}
-                  name="national_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Documento Nacional</FormLabel>
-                      <FormControl>
-                        <Input {...field} className={inputCls} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-6 md:col-span-4">
-                <FormField
-                  control={form.control}
-                  name="document_validation_method"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelCls}>Validação</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className={inputCls}>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="manual">Manual</SelectItem>
-                          <SelectItem value="ocr">OCR</SelectItem>
-                          <SelectItem value="api">API Gov</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        <Card className="shadow-fluent border-slate-200">
+          <CardHeader><CardTitle className="text-base text-[#0F2B45]">Naturalidade</CardTitle></CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <FormField control={form.control} name="place_of_birth_country" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>País</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="place_of_birth_state" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>Estado</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="place_of_birth_city" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>Cidade</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+          </CardContent>
+        </Card>
 
-        {/* COLUNA DIREITA */}
-        <div className="col-span-12 lg:col-span-4 space-y-6">
-          <div className="bg-white border border-slate-200 border-t-4 border-t-emerald-500 rounded-md shadow-fluent p-6">
-            <div className="flex items-center gap-2 mb-4 text-emerald-700 font-bold text-base">
-              <Phone size={22} weight="duotone" /> Canais de Contato
+        <Card className="shadow-fluent border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-base text-[#0F2B45]">Documentação Civil</CardTitle>
+            <CardDescription>RG, CPF e validação.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <FormField control={form.control} name="cpf" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>CPF</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="rg" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>RG</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="rg_issuer" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>Órgão Emissor</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="rg_issuer_state" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>UF Emissor</FormLabel>
+                <FormControl><Input maxLength={2} {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="rg_issued_at" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>Data Emissão</FormLabel>
+                <FormControl>
+                  <Input type="date" value={field.value ? format(field.value, "yyyy-MM-dd") : ""} onChange={(e)=>field.onChange(e.target.value ? new Date(e.target.value):undefined)} className={inputCls}/>
+                </FormControl>
+              </FormItem>
+            )}/>
+            <div className="md:col-span-4 col-span-12 text-sm text-slate-600">
+              <p>Status: <span className="font-semibold">{patient.doc_validation_status || "Pendente"}</span></p>
+              {patient.doc_validated_by && patient.doc_validated_at && (
+                <p className="text-xs text-slate-500">Validado por {patient.doc_validated_by} em {patient.doc_validated_at}</p>
+              )}
             </div>
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="mobile_phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className={labelCls}>Celular Principal</FormLabel>
-                    <FormControl>
-                      <Input {...field} className={`${inputCls} font-semibold`} placeholder="(00) 00000-0000" />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="secondary_phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className={labelCls}>Telefone Secundário</FormLabel>
-                    <FormControl>
-                      <Input {...field} className={inputCls} placeholder="(00) 0000-0000" />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className={labelCls}>E-mail</FormLabel>
-                    <FormControl>
-                      <Input {...field} className={inputCls} type="email" />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="pref_contact_method"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className={labelCls}>Preferência de Contato</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className={inputCls}>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="whatsapp">
-                          <WhatsappLogo className="mr-2 inline text-emerald-500" /> WhatsApp
-                        </SelectItem>
-                        <SelectItem value="phone">Ligação</SelectItem>
-                        <SelectItem value="email">E-mail</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
+          </CardContent>
+        </Card>
 
-              <div className="border-t border-slate-100 pt-3 space-y-2">
-                <FormField
-                  control={form.control}
-                  name="accept_sms"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center space-x-2 space-y-0">
-                      <FormControl>
-                        <Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} />
-                      </FormControl>
-                      <FormLabel className="text-xs text-slate-600">Aceita SMS</FormLabel>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="accept_email"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center space-x-2 space-y-0">
-                      <FormControl>
-                        <Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} />
-                      </FormControl>
-                      <FormLabel className="text-xs text-slate-600">Aceita E-mail</FormLabel>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="block_marketing"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center space-x-2 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={(val) => field.onChange(!!val)}
-                          className="data-[state=checked]:border-rose-500 data-[state=checked]:bg-rose-500"
-                        />
-                      </FormControl>
-                      <FormLabel className="text-xs text-rose-700 font-semibold">Bloquear Marketing</FormLabel>
-                    </FormItem>
-                  )}
-                />
-              </div>
+        <Card className="shadow-fluent border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-base text-[#0F2B45]">Documentos Extras</CardTitle>
+            <CardDescription>Passaporte, RNE, CNH.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Número</TableHead>
+                  <TableHead>Validade</TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {documents.fields.map((item, idx) => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <Input {...form.register(`civil_documents.${idx}.doc_type` as const)} className={inputCls} placeholder="Passaporte/RNE" />
+                    </TableCell>
+                    <TableCell>
+                      <Input {...form.register(`civil_documents.${idx}.doc_number` as const)} className={inputCls} />
+                    </TableCell>
+                    <TableCell>
+                      <Input type="date" {...form.register(`civil_documents.${idx}.valid_until` as const)} className={inputCls} />
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" onClick={() => documents.remove(idx)}>Remover</Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <Button type="button" variant="outline" size="sm" onClick={() => documents.append({ doc_type: "", doc_number: "" })}>
+              + Adicionar Documento
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-fluent border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-base text-[#0F2B45]">Contato e Preferências</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <FormField control={form.control} name="mobile_phone" render={({ field }) => (
+              <FormItem className="md:col-span-6 col-span-12">
+                <FormLabel className={labelCls}>Celular</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="secondary_phone" render={({ field }) => (
+              <FormItem className="md:col-span-6 col-span-12">
+                <FormLabel className={labelCls}>Telefone</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="email" render={({ field }) => (
+              <FormItem className="md:col-span-6 col-span-12">
+                <FormLabel className={labelCls}>Email</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="pref_contact_method" render={({ field }) => (
+              <FormItem className="md:col-span-6 col-span-12">
+                <FormLabel className={labelCls}>Preferência</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl><SelectTrigger className={inputCls}><SelectValue /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                    <SelectItem value="phone">Telefone</SelectItem>
+                    <SelectItem value="email">E-mail</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="contact_time_preference" render={({ field }) => (
+              <FormItem className="md:col-span-6 col-span-12">
+                <FormLabel className={labelCls}>Melhor Horário</FormLabel>
+                <FormControl><Input {...field} className={inputCls} placeholder="Manhã/Tarde/Noite/Comercial" /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="contact_notes" render={({ field }) => (
+              <FormItem className="md:col-span-6 col-span-12">
+                <FormLabel className={labelCls}>Observações</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+            <div className="md:col-span-12 grid grid-cols-1 md:grid-cols-3 gap-3">
+              <FormField control={form.control} name="accept_sms" render={({ field }) => (
+                <FormItem className="flex items-center space-x-2">
+                  <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                  <FormLabel className="text-xs font-semibold text-slate-600 uppercase">Aceita SMS</FormLabel>
+                </FormItem>
+              )}/>
+              <FormField control={form.control} name="accept_email" render={({ field }) => (
+                <FormItem className="flex items-center space-x-2">
+                  <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                  <FormLabel className="text-xs font-semibold text-slate-600 uppercase">Aceita Email</FormLabel>
+                </FormItem>
+              )}/>
+              <FormField control={form.control} name="block_marketing" render={({ field }) => (
+                <FormItem className="flex items-center space-x-2">
+                  <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                  <FormLabel className="text-xs font-semibold text-slate-600 uppercase">Bloquear Marketing</FormLabel>
+                </FormItem>
+              )}/>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="bg-white border border-slate-200 rounded-md shadow-fluent p-6">
-            <div className="flex items-center gap-2 mb-4 text-[#0F2B45] font-bold text-base">
-              <Gavel size={22} weight="duotone" /> Responsável Legal
-            </div>
-            {legalGuardian ? (
-              <div className="space-y-3">
-                <div>
-                  <p className="text-lg font-bold text-[#0F2B45]">{legalGuardian.full_name}</p>
-                  <p className="text-sm font-semibold uppercase text-slate-500">{legalGuardian.relation}</p>
-                </div>
-                <div className="space-y-2 rounded border border-slate-100 bg-slate-50 p-3 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Phone className="text-slate-400" /> {legalGuardian.phone}
-                  </div>
-                  <div className="flex items-center gap-2 font-semibold text-emerald-700">
-                    <CheckCircle /> Representante Legal
-                  </div>
-                  {legalGuardian.can_authorize_procedures && (
-                    <div className="flex items-center gap-2 font-semibold text-blue-700">
-                      <CheckCircle /> Pode Autorizar
-                    </div>
-                  )}
-                </div>
-                <Button variant="outline" className="w-full text-xs">
-                  Ver Documento da Procuração
-                </Button>
-              </div>
-            ) : (
-              <div className="py-6 text-center text-slate-400">
-                <WarningCircle size={32} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Nenhum responsável legal cadastrado.</p>
-                <Button variant="link" className="text-[#D46F5D]">
-                  Adicionar na aba Rede de Apoio
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
+        <Card className="shadow-fluent border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-base text-[#0F2B45]">LGPD</CardTitle>
+          </CardHeader>
+          <CardContent className="text-xs text-slate-600">
+            Consentimento de Marketing: {patient.block_marketing ? "Recusado" : "Aceito"} {patient.marketing_consent_source ? `- Origem: ${patient.marketing_consent_source}` : ""} {patient.marketing_consented_at ? `em ${patient.marketing_consented_at}` : ""}
+          </CardContent>
+        </Card>
 
-        {/* BOTÃO FLUTUANTE */}
-        <div className="fixed bottom-6 right-8 shadow-2xl z-50">
-          <Button type="submit" className="bg-[#D46F5D] hover:bg-[#c05846] text-white px-6 py-4 rounded-full font-bold flex items-center gap-2 shadow-lg">
-            <FloppyDisk size={20} weight="bold" /> Salvar Alterações
-          </Button>
+        <div className="flex justify-end">
+          <Button type="submit" className="bg-[#0F2B45] text-white px-6">Salvar Alterações</Button>
         </div>
       </form>
     </Form>

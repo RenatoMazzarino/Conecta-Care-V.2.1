@@ -12,25 +12,19 @@ export const MedicationSchema = z.object({
 
 export const PatientClinicalSchema = z.object({
   patient_id: z.string().uuid(),
-  
-  // Perfil Geral
+  cid_main: z.string().optional(),
   complexity_level: z.enum(['low', 'medium', 'high', 'critical']).optional(),
-  diagnosis_main: z.string().optional(),
-  diagnosis_secondary: z.array(z.string()).optional(),
+  blood_type: z.string().optional(),
+  clinical_summary: z.string().optional(),
   allergies: z.array(z.string()).optional(),
-  clinical_tags: z.array(z.string()).optional(),
-  clinical_summary_note: z.string().optional(),
-
-  // Riscos e Escalas
+  devices: z.array(z.string()).optional(),
   risk_braden: z.coerce.number().min(0).max(23).optional(),
   risk_morse: z.coerce.number().min(0).max(125).optional(),
-  
-  // Oxigenoterapia
   oxygen_usage: z.boolean().default(false),
+  oxygen_mode: z.string().optional(),
+  oxygen_interface: z.string().optional(),
   oxygen_flow: z.string().optional(),
-  oxygen_equipment: z.string().optional(),
-
-  // Medicamentos (Sub-tabela)
+  oxygen_regime: z.string().optional(),
   medications: z.array(MedicationSchema).optional(),
 });
 

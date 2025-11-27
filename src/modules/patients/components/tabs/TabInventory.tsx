@@ -1,223 +1,224 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FullPatientDetails } from "../../patient.data";
-import { 
-    getMasterInventoryAction, 
-    upsertPatientItemAction, 
-    deletePatientItemAction 
-} from "../../actions.inventory";
-import { MasterItemSelect, PatientInventoryDTO } from "@/data/definitions/inventory";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { Package, Plus, Trash, QrCode, Tag, ArrowUUpLeft } from "@phosphor-icons/react";
-import { format } from "date-fns";
+import { assignAsset, returnAsset, updateConsumableStock } from "@/app/(app)/patients/actions.inventory";
+import { Calendar, Warehouse, Package, ArrowSquareDownLeft } from "@phosphor-icons/react";
 
-// --- DIALOG DE ADICIONAR ITEM ---
-type AddItemDialogProps = {
-    patientId: string;
-    masterItems: MasterItemSelect[];
-    onSave: (data: PatientInventoryDTO) => Promise<void>;
+type Asset = {
+  id: string;
+  item_name?: string;
+  serial_number?: string;
+  location?: string;
+  installed_at?: string;
+  status?: string;
 };
 
-type InventoryRecord = PatientInventoryDTO & {
-    id: string;
-    item?: { category?: string; name?: string };
+type Consumable = {
+  id: string;
+  item_id?: string;
+  item_name?: string;
+  quantity?: number;
+  min_quantity?: number;
+  last_replenished_at?: string;
 };
 
-function AddItemDialog({ patientId, masterItems, onSave }: AddItemDialogProps) {
-    const [open, setOpen] = useState(false);
-    const [selectedItemId, setSelectedItemId] = useState("");
-    const [qty, setQty] = useState(1);
-    const [serial, setSerial] = useState("");
-    const [note, setNote] = useState("");
+function AssetSheet({ patientId, onSaved }: { patientId: string; onSaved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [itemId, setItemId] = useState("");
+  const [serial, setSerial] = useState("");
+  const [location, setLocation] = useState("");
+  const [saving, setSaving] = useState(false);
 
-    // Encontra o item selecionado para saber se é rastreável (equipment)
-    const selectedMaster = masterItems.find((i) => i.id === selectedItemId);
-    const isTrackable = selectedMaster?.is_trackable;
+  const handleSave = async () => {
+    setSaving(true);
+    const res = await assignAsset({ patientId, itemId, serial, location });
+    setSaving(false);
+    if (!res.success) return toast.error(res.error || "Erro ao alocar");
+    toast.success("Equipamento alocado");
+    setOpen(false);
+    onSaved();
+  };
 
-    const handleSave = async () => {
-        if (!selectedItemId) return toast.error("Selecione um item.");
-        if (isTrackable && !serial) return toast.error("Número de série obrigatório para equipamentos.");
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button size="sm" variant="outline"><Warehouse className="w-4 h-4 mr-1" /> Alocar Equipamento</Button>
+      </SheetTrigger>
+      <SheetContent className="sm:max-w-md space-y-4">
+        <SheetHeader><SheetTitle>Alocar Equipamento</SheetTitle></SheetHeader>
+        <div className="space-y-3">
+          <div className="space-y-1"><Label>ID do item</Label><Input value={itemId} onChange={(e)=>setItemId(e.target.value)} placeholder="Item master" /></div>
+          <div className="space-y-1"><Label>Nº Série / Patrimônio</Label><Input value={serial} onChange={(e)=>setSerial(e.target.value)} /></div>
+          <div className="space-y-1"><Label>Local de uso</Label><Input value={location} onChange={(e)=>setLocation(e.target.value)} placeholder="Quarto, sala..." /></div>
+        </div>
+        <SheetFooter className="flex gap-2"><Button variant="outline" onClick={()=>setOpen(false)}>Cancelar</Button><Button onClick={handleSave} disabled={saving || !itemId}>Salvar</Button></SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}
 
-        const payload: PatientInventoryDTO = {
-            patient_id: patientId,
-            item_id: selectedItemId,
-            current_quantity: qty,
-            serial_number: serial,
-            location_note: note,
-            status: "active",
-            installed_at: new Date()
-        };
+function ReturnButton({ assetId, onDone }: { assetId: string; onDone: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const handle = async () => {
+    setLoading(true);
+    const res = await returnAsset({ assetId });
+    setLoading(false);
+    if (!res.success) return toast.error(res.error || "Erro");
+    toast.success("Equipamento devolvido");
+    onDone();
+  };
+  return <Button size="sm" variant="ghost" onClick={handle} disabled={loading} className="text-rose-600">Devolver</Button>;
+}
 
-        await onSave(payload);
-        setOpen(false);
-        // Reset form
-        setSelectedItemId("");
-        setQty(1);
-        setSerial("");
-    };
+function ConsumableSheet({ patientId, onSaved }: { patientId: string; onSaved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [itemId, setItemId] = useState("");
+  const [qty, setQty] = useState(0);
+  const [type, setType] = useState<"in"|"out">("in");
+  const [saving, setSaving] = useState(false);
 
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button size="sm" className="bg-[#0F2B45] text-white"><Plus className="mr-2"/> Alocar Item</Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader><DialogTitle>Alocar Item ao Paciente</DialogTitle></DialogHeader>
-                <div className="space-y-4 py-4">
-                    <div className="grid gap-2">
-                        <Label>Item do Catálogo</Label>
-                        <Select onValueChange={setSelectedItemId} value={selectedItemId}>
-                            <SelectTrigger><SelectValue placeholder="Buscar no catálogo..." /></SelectTrigger>
-                            <SelectContent>
-                                {masterItems.map((item) => (
-                                    <SelectItem key={item.id} value={item.id}>
-                                        {item.name} {item.brand ? `(${item.brand})` : ''}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+  const handleSave = async () => {
+    setSaving(true);
+    const res = await updateConsumableStock({ patientId, itemId, quantity: qty, type });
+    setSaving(false);
+    if (!res.success) return toast.error(res.error || "Erro");
+    toast.success("Saldo atualizado");
+    setOpen(false);
+    onSaved();
+  };
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                            <Label>Quantidade</Label>
-                            <Input type="number" min={1} value={qty} onChange={e => setQty(Number(e.target.value))} />
-                        </div>
-                        
-                        {isTrackable && (
-                            <div className="grid gap-2">
-                                <Label className="text-blue-600 font-bold">Nº de Série / Patrimônio</Label>
-                                <Input value={serial} onChange={e => setSerial(e.target.value)} placeholder="SN-123456" />
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label>Local / Observação</Label>
-                        <Input value={note} onChange={e => setNote(e.target.value)} placeholder="Ex: Quarto, Mesa de cabeceira" />
-                    </div>
-
-                    <Button onClick={handleSave} className="w-full bg-[#D46F5D]">Confirmar Alocação</Button>
-                </div>
-            </DialogContent>
-        </Dialog>
-    );
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button size="sm" variant="outline"><ArrowSquareDownLeft className="w-4 h-4 mr-1" /> Solicitar/ Ajuste</Button>
+      </SheetTrigger>
+      <SheetContent className="sm:max-w-md space-y-4">
+        <SheetHeader><SheetTitle>Reposição / Ajuste</SheetTitle></SheetHeader>
+        <div className="space-y-3">
+          <div className="space-y-1"><Label>ID do item</Label><Input value={itemId} onChange={(e)=>setItemId(e.target.value)} /></div>
+          <div className="space-y-1"><Label>Quantidade</Label><Input type="number" value={qty} onChange={(e)=>setQty(Number(e.target.value))} /></div>
+          <div className="space-y-1">
+            <Label>Tipo</Label>
+            <div className="flex items-center gap-3">
+              <Button type="button" variant={type==='in'?'default':'outline'} onClick={()=>setType('in')}>Entrada</Button>
+              <Button type="button" variant={type==='out'?'default':'outline'} onClick={()=>setType('out')}>Saída</Button>
+            </div>
+          </div>
+        </div>
+        <SheetFooter className="flex gap-2"><Button variant="outline" onClick={()=>setOpen(false)}>Cancelar</Button><Button onClick={handleSave} disabled={saving || !itemId}>Salvar</Button></SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
 }
 
 export function TabInventory({ patient }: { patient: FullPatientDetails }) {
-    const inventory = (patient.inventory as InventoryRecord[] | undefined) || [];
-    const [masterItems, setMasterItems] = useState<MasterItemSelect[]>([]);
+  const assets: Asset[] = (patient as any).assigned_assets || [];
+  const consumables: Consumable[] = (patient as any).consumables || [];
+  const movements: any[] = (patient as any).movements || [];
 
-    // Carrega o catálogo mestre ao montar a aba
-    useEffect(() => {
-        getMasterInventoryAction().then(setMasterItems);
-    }, []);
+  const refresh = () => window.location.reload();
 
-    const handleSave = async (data: PatientInventoryDTO) => {
-        const res = await upsertPatientItemAction(data);
-        if (res.success) toast.success("Item alocado com sucesso!");
-        else toast.error(res.error);
-    };
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Ativos */}
+        <Card className="shadow-fluent border-slate-200">
+          <CardHeader className="border-b border-slate-100 flex items-center justify-between">
+            <CardTitle className="text-base text-[#0F2B45] flex items-center gap-2"><Warehouse className="w-5 h-5" /> Ativos Alocados</CardTitle>
+            <AssetSheet patientId={patient.id} onSaved={refresh} />
+          </CardHeader>
+          <CardContent className="space-y-3 pt-4">
+            {assets.length === 0 ? (
+              <div className="text-sm text-slate-500">Nenhum equipamento alocado.</div>
+            ) : (
+              assets.map((a) => (
+                <div key={a.id} className="flex items-center justify-between rounded border border-slate-100 px-3 py-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-[10px]">{a.serial_number || 'Sem série'}</Badge>
+                      <Badge className={a.status === 'em_uso' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}>{a.status || 'Em uso'}</Badge>
+                    </div>
+                    <p className="text-sm font-semibold text-slate-800">{a.item_name || 'Equipamento'}</p>
+                    <p className="text-xs text-slate-500">Local: {a.location || 'N/D'}</p>
+                    {a.installed_at && <p className="text-[11px] text-slate-400 flex items-center gap-1"><Calendar className="w-4 h-4" /> {new Date(a.installed_at).toLocaleDateString('pt-BR')}</p>}
+                  </div>
+                  <ReturnButton assetId={a.id} onDone={refresh} />
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
 
-    const handleDelete = async (id: string) => {
-        if (confirm("Devolver/Remover este item?")) {
-            await deletePatientItemAction(id, patient.id);
-            toast.success("Item removido.");
-        }
-    };
+        {/* Consumíveis */}
+        <Card className="shadow-fluent border-slate-200">
+          <CardHeader className="border-b border-slate-100 flex items-center justify-between">
+            <CardTitle className="text-base text-[#0F2B45] flex items-center gap-2"><Package className="w-5 h-5" /> Estoque de Consumo</CardTitle>
+            <ConsumableSheet patientId={patient.id} onSaved={refresh} />
+          </CardHeader>
+          <CardContent className="space-y-3 pt-4">
+            {consumables.length === 0 ? (
+              <div className="text-sm text-slate-500">Nenhum insumo cadastrado.</div>
+            ) : (
+              consumables.map((c) => {
+                const qty = c.quantity || 0;
+                const min = c.min_quantity || 0;
+                const percent = min > 0 ? Math.min(100, Math.round((qty / min) * 100)) : 100;
+                const critical = min > 0 && qty < min;
+                return (
+                  <div key={c.id} className="rounded border border-slate-100 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">{c.item_name || 'Item'}</p>
+                        <p className="text-xs text-slate-500">Qtd: {qty} / Mín: {min}</p>
+                      </div>
+                      <Badge className={critical ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}>{critical ? 'Crítico' : 'OK'}</Badge>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                      <div
+                        className={`h-full ${critical ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                    {c.last_replenished_at && <p className="text-[11px] text-slate-400">Última reposição: {new Date(c.last_replenished_at).toLocaleDateString('pt-BR')}</p>}
+                    <Button size="sm" variant="outline" onClick={() => updateConsumableStock({ patientId: patient.id, itemId: c.item_id || '', quantity: 1, type: 'out' }).then(refresh)}>
+                      Ajuste rápido (-1)
+                    </Button>
+                  </div>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-    return (
-        <div className="space-y-6">
-            <Card className="bg-white border border-slate-200 border-t-4 border-t-cyan-600 rounded-md shadow-fluent">
-                <CardHeader className="border-b border-slate-100 pb-3 flex flex-row items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-cyan-800">
-                        <Package size={18} /> Inventário no Domicílio
-                    </CardTitle>
-                    <AddItemDialog patientId={patient.id} masterItems={masterItems} onSave={handleSave} />
-                </CardHeader>
-                <CardContent className="p-0">
-                    {inventory.length === 0 ? (
-                        <div className="text-center py-12 text-slate-400">
-                            <Package size={40} className="mx-auto mb-2 opacity-50" />
-                            <p className="text-sm">Nenhum item alocado neste domicílio.</p>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-slate-50 text-[11px] uppercase text-slate-500">
-                                    <tr>
-                                        <th className="px-4 py-3 text-left">Item</th>
-                                        <th className="px-4 py-3 text-left">Detalhes</th>
-                                        <th className="px-4 py-3 text-left">Local</th>
-                                        <th className="px-4 py-3 text-left">Data</th>
-                                        <th className="px-4 py-3 text-right">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {inventory.map((record) => (
-                                        <tr key={record.id} className="border-b border-slate-50 hover:bg-slate-50/70">
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`p-2 rounded-lg ${record.item?.category === 'equipment' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                                                        {record.item?.category === 'equipment' ? <QrCode size={18}/> : <Tag size={18}/>}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-bold text-slate-800">{record.item?.name || 'Item sem nome'}</p>
-                                                        {record.serial_number && (
-                                                            <Badge variant="outline" className="font-mono text-[10px] text-slate-600 mt-1">SN: {record.serial_number}</Badge>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-xs text-slate-600">
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="font-semibold">Qtd: {record.current_quantity}</span>
-                                                    <span className="text-slate-500">{record.status === 'active' ? 'Em uso' : 'Devolvido'}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-xs text-slate-600">
-                                                {record.location_note || "Sem local definido"}
-                                            </td>
-                                            <td className="px-4 py-3 text-xs text-slate-600">
-                                                {record.installed_at ? format(new Date(record.installed_at), 'dd/MM/yyyy') : '—'}
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
-                                                <div className="flex justify-end items-center gap-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="h-8 text-xs flex items-center gap-1"
-                                                        onClick={() => handleDelete(record.id)}
-                                                    >
-                                                        <ArrowUUpLeft size={14} /> Devolver
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="text-slate-300 hover:text-rose-500"
-                                                        onClick={() => handleDelete(record.id)}
-                                                    >
-                                                        <Trash size={16} />
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
-    );
+      {/* Histórico */}
+      <Card className="shadow-fluent border-slate-200">
+        <CardHeader className="border-b border-slate-100">
+          <CardTitle className="text-base text-[#0F2B45]">Histórico de Movimentações</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4 space-y-2 text-sm">
+          {movements.length === 0 ? (
+            <div className="text-slate-500">Sem movimentações.</div>
+          ) : (
+            movements.slice(0, 5).map((m) => (
+              <div key={m.id} className="flex items-center justify-between rounded border border-slate-100 px-3 py-2">
+                <span>{new Date(m.created_at).toLocaleDateString('pt-BR')}</span>
+                <Badge variant="outline" className="text-[10px]">{m.movement_type}</Badge>
+                <span>{m.item_id || m.asset_id}</span>
+                <span>Qtd: {m.quantity || 1}</span>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

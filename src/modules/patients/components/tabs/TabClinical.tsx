@@ -1,436 +1,232 @@
 'use client';
-/* eslint-disable react-hooks/incompatible-library */
 
-import { useFieldArray, useForm } from "react-hook-form";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PatientClinicalSchema, PatientClinicalDTO } from "@/data/definitions/clinical";
-import { upsertClinicalAction } from "@/modules/patients/actions.upsertClinical";
-import { FullPatientDetails } from "@/modules/patients/patient.data";
+import { upsertClinicalDataAction } from "@/app/(app)/patients/actions.upsertClinicalData";
+import { FullPatientDetails } from "../../patient.data";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Heartbeat, Pill, Plus, Trash, Wind, ChartBar, Tag, WarningCircle } from "@phosphor-icons/react";
+import { Heartbeat, Stethoscope, Gauge, Wind, Plus, ClipboardText, Warning } from "@phosphor-icons/react";
 
-type TabClinicalProps = { patient: FullPatientDetails };
+const deviceOptions = ["GTT", "TQT", "SVD", "CVC", "PICC", "Marcapasso"];
 
-export function TabClinical({ patient }: TabClinicalProps) {
-  const clinical: Partial<PatientClinicalDTO> = patient.clinical?.[0] || {};
-  const medicationsList = patient.medications ?? [];
-  type MedicationInput = PatientClinicalDTO["medications"] extends Array<infer U> ? U : never;
+const complexityBadge = (level?: string) => {
+  const map: any = {
+    low: "bg-emerald-100 text-emerald-700",
+    medium: "bg-amber-100 text-amber-800",
+    high: "bg-orange-100 text-orange-800",
+    critical: "bg-rose-100 text-rose-800",
+  };
+  return map[level || "low"] || "bg-slate-100 text-slate-700";
+};
 
+export function TabClinical({ patient }: { patient: FullPatientDetails }) {
+  const clinical: any = patient.clinical?.[0] || {};
   const form = useForm<PatientClinicalDTO>({
     resolver: zodResolver(PatientClinicalSchema) as any,
     defaultValues: {
       patient_id: patient.id,
-      complexity_level: clinical.complexity_level ?? "medium",
-      diagnosis_main: clinical.diagnosis_main ?? "",
-      clinical_summary_note: clinical.clinical_summary_note ?? "",
-      risk_braden: clinical.risk_braden ?? 0,
-      risk_morse: clinical.risk_morse ?? 0,
-      oxygen_usage: clinical.oxygen_usage ?? false,
-      oxygen_flow: clinical.oxygen_flow ?? "",
-      oxygen_equipment: clinical.oxygen_equipment ?? "",
-      clinical_tags: clinical.clinical_tags ?? [],
-      medications: medicationsList.map((m) => ({
-        id: m.id,
-        name: m.name,
-        dosage: m.dosage || undefined,
-        frequency: m.frequency || undefined,
-        route: m.route || undefined,
-        is_critical: m.is_critical ?? false,
-        status: (m.status ?? "active") as MedicationInput["status"],
-      })),
+      cid_main: clinical.cid_main || "",
+      complexity_level: clinical.complexity_level || "medium",
+      blood_type: clinical.blood_type || "",
+      clinical_summary: clinical.clinical_summary || "",
+      allergies: clinical.allergies || [],
+      devices: clinical.devices || [],
+      risk_braden: clinical.risk_braden || 0,
+      risk_morse: clinical.risk_morse || 0,
+      oxygen_usage: clinical.oxygen_usage || false,
+      oxygen_mode: clinical.oxygen_mode || "",
+      oxygen_interface: clinical.oxygen_interface || "",
+      oxygen_flow: clinical.oxygen_flow || "",
+      oxygen_regime: clinical.oxygen_regime || "",
+      medications: [], // não exibimos medicações aqui
     },
   });
 
-  const { fields: medFields, append: appendMed, remove: removeMed } = useFieldArray({
-    control: form.control,
-    name: "medications",
-  });
+  const [allergyInput, setAllergyInput] = useState("");
+  const [openDevices, setOpenDevices] = useState(false);
+  const [openRisk, setOpenRisk] = useState(false);
+  const oxygenOn = form.watch("oxygen_usage");
+  const devices = form.watch("devices") || [];
+  const allergies = form.watch("allergies") || [];
 
-  const toggleTag = (tag: string, currentTags: string[] = []) => {
-    const newTags = currentTags.includes(tag) ? currentTags.filter((t) => t !== tag) : [...currentTags, tag];
-    form.setValue("clinical_tags", newTags);
+  const addAllergy = () => {
+    if (!allergyInput.trim()) return;
+    form.setValue("allergies", [...allergies, allergyInput.trim()]);
+    setAllergyInput("");
+  };
+  const removeAllergy = (a: string) => form.setValue("allergies", allergies.filter((x: string) => x !== a));
+
+  const toggleDevice = (d: string) => {
+    form.setValue("devices", devices.includes(d) ? devices.filter((x: string) => x !== d) : [...devices, d]);
+  };
+
+  const updateRisk = (field: "risk_braden" | "risk_morse", value: number) => {
+    form.setValue(field, value);
   };
 
   async function onSubmit(data: PatientClinicalDTO) {
-    const res = await upsertClinicalAction(data);
+    const res = await upsertClinicalDataAction(data);
     if (res.success) toast.success("Dados clínicos atualizados!");
-    else toast.error(res.error);
+    else toast.error(res.error || "Erro ao salvar.");
   }
-
-  const oxygenActive = form.watch("oxygen_usage");
-  const currentTags = form.watch("clinical_tags") || [];
-
-  const labelCls = "text-[11px] font-bold uppercase text-slate-500 tracking-wider";
-  const inputCls = "h-9 text-sm";
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-12 gap-6 pb-20">
-        {/* COLUNA ESQUERDA */}
-        <div className="col-span-12 lg:col-span-8 space-y-6">
-          {/* Perfil Assistencial */}
-          <Card className="border border-slate-200 border-t-4 border-t-rose-600 rounded-md shadow-fluent">
-            <CardHeader className="border-b border-slate-100 pb-3 bg-white flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-rose-700">
-                <Heartbeat size={18} weight="duotone" /> Perfil Assistencial
-              </CardTitle>
-              {(clinical.complexity_level === "high" || clinical.complexity_level === "critical") && (
-                <Badge className="bg-rose-100 text-rose-800 border-rose-200 text-[10px] font-bold uppercase">Alta Complexidade</Badge>
-              )}
+      <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-16">
+        {/* Coluna esquerda */}
+        <div className="space-y-6">
+          <Card className="shadow-fluent border-slate-200">
+            <CardHeader className="border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base text-[#0F2B45]">
+                  <Heartbeat className="w-5 h-5" /> Resumo do Caso
+                </CardTitle>
+                <Badge className={complexityBadge(form.watch("complexity_level"))}>{form.watch("complexity_level")}</Badge>
+              </div>
             </CardHeader>
-            <CardContent className="pt-5 space-y-5">
-              <div className="grid grid-cols-12 gap-4">
-                <div className="col-span-9">
-                  <FormField
-                    control={form.control}
-                    name="diagnosis_main"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className={labelCls}>Diagnóstico Principal (CID)</FormLabel>
-                        <FormControl>
-                          <Input {...field} className={`${inputCls} font-semibold`} placeholder="Ex: Sequela de AVC (I69.3)" />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="complexity_level"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className={labelCls}>Complexidade</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className={inputCls}>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="low">Baixa</SelectItem>
-                            <SelectItem value="medium">Média</SelectItem>
-                            <SelectItem value="high">Alta</SelectItem>
-                            <SelectItem value="critical">Crítica (UTI)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="col-span-12">
-                  <FormLabel className={`${labelCls} mb-2 block flex items-center gap-2`}><Tag /> Dispositivos em Uso</FormLabel>
-                  <div className="flex flex-wrap gap-3">
-                    {["GTT", "TQT", "SVD", "Cadeirante", "Acamado"].map((tag) => (
-                      <button
-                        type="button"
-                        key={tag}
-                        onClick={() => toggleTag(tag, currentTags)}
-                        className={`rounded-md border px-4 py-2 text-xs font-semibold transition-all ${
-                          currentTags.includes(tag)
-                            ? "border-[#0F2B45] bg-[#0F2B45] text-white"
-                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
-                        }`}
-                      >
-                        {tag}
-                      </button>
-                    ))}
+            <CardContent className="space-y-4 pt-4">
+              <div className="grid grid-cols-3 gap-3">
+                <FormField control={form.control} name="cid_main" render={({ field }) => (
+                  <FormItem><FormLabel>CID Principal</FormLabel><FormControl><Input {...field} placeholder="CID ou texto livre" /></FormControl></FormItem>
+                )} />
+                <FormField control={form.control} name="complexity_level" render={({ field }) => (
+                  <FormItem><FormLabel>Complexidade</FormLabel><FormControl>
+                    <select className="w-full h-9 rounded border border-slate-200 px-2 text-sm" value={field.value} onChange={field.onChange}>
+                      <option value="low">Baixa</option><option value="medium">Média</option><option value="high">Alta</option><option value="critical">Crítica</option>
+                    </select>
+                  </FormControl></FormItem>
+                )} />
+                <FormField control={form.control} name="blood_type" render={({ field }) => (
+                  <FormItem><FormLabel>Tipo Sanguíneo</FormLabel><FormControl><Input {...field} placeholder="A+, O-..." /></FormControl></FormItem>
+                )} />
+              </div>
+              <FormField control={form.control} name="clinical_summary" render={({ field }) => (
+                <FormItem><FormLabel>Resumo Clínico</FormLabel><FormControl><Textarea {...field} rows={4} placeholder="Paciente com sequela de AVC..." /></FormControl><FormMessage /></FormItem>
+              )} />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <FormLabel>Alergias</FormLabel>
+                  <div className="flex gap-2">
+                    <Input value={allergyInput} onChange={(e) => setAllergyInput(e.target.value)} placeholder="Nova alergia" className="h-8 w-40 text-sm" />
+                    <Button type="button" size="sm" onClick={addAllergy}><Plus className="w-4 h-4" /></Button>
                   </div>
                 </div>
-                <div className="col-span-12">
-                  <FormField
-                    control={form.control}
-                    name="clinical_summary_note"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className={labelCls}>Resumo Clínico</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} className="text-sm" rows={3} placeholder="Observações gerais, condutas e orientações importantes" />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                <div className="flex flex-wrap gap-2">
+                  {allergies.length === 0 && <span className="text-xs text-slate-500">Nenhuma alergia.</span>}
+                  {allergies.map((a: string) => (
+                    <Badge key={a} className="bg-rose-100 text-rose-700 flex items-center gap-1">
+                      {a}
+                      <button type="button" onClick={() => removeAllergy(a)}>×</button>
+                    </Badge>
+                  ))}
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Prescrição Medicamentosa */}
-          <Card className="border border-slate-200 rounded-md shadow-fluent">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 pb-3 bg-white">
-              <CardTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[#0F2B45]">
-                <Pill size={18} /> Prescrição Medicamentosa
-              </CardTitle>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-8"
-                onClick={() => appendMed({ name: "", is_critical: false, status: "active" })}
-              >
-                <Plus className="mr-2 h-3 w-3" /> Adicionar
-              </Button>
+          <Card className="shadow-fluent border-slate-200">
+            <CardHeader className="flex items-center justify-between border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2 text-base text-[#0F2B45]"><ClipboardText className="w-5 h-5" /> Invasivos e Suporte</CardTitle>
+              <Sheet open={openDevices} onOpenChange={setOpenDevices}>
+                <SheetTrigger asChild><Button size="sm" variant="outline">Gerenciar Dispositivos</Button></SheetTrigger>
+                <SheetContent className="sm:max-w-sm space-y-3">
+                  <SheetHeader><SheetTitle>Dispositivos</SheetTitle></SheetHeader>
+                  {deviceOptions.map((d) => (
+                    <div key={d} className="flex items-center gap-2">
+                      <Checkbox checked={devices.includes(d)} onCheckedChange={() => toggleDevice(d)} />
+                      <span>{d}</span>
+                    </div>
+                  ))}
+                  <SheetFooter />
+                </SheetContent>
+              </Sheet>
             </CardHeader>
-            <CardContent className="p-0">
-              {medFields.length === 0 ? (
-                <p className="py-6 text-center text-sm text-slate-400">Nenhum medicamento registrado.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 text-[10px] uppercase text-slate-500">
-                      <tr>
-                        <th className="text-left px-4 py-3">Fármaco</th>
-                        <th className="text-left px-4 py-3">Dose</th>
-                        <th className="text-left px-4 py-3">Frequência</th>
-                        <th className="text-left px-4 py-3">Via</th>
-                        <th className="text-left px-4 py-3">Status</th>
-                        <th className="text-left px-4 py-3">Crítico</th>
-                        <th className="text-right px-4 py-3">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {medFields.map((field, index) => (
-                        <tr key={field.id} className="border-b border-slate-50 hover:bg-slate-50/70">
-                          <td className="px-4 py-3">
-                            <FormField
-                              control={form.control}
-                              name={`medications.${index}.name`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input {...field} className={`${inputCls} font-semibold`} />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </td>
-                          <td className="px-4 py-3 w-28">
-                            <FormField
-                              control={form.control}
-                              name={`medications.${index}.dosage`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input {...field} className={inputCls} />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </td>
-                          <td className="px-4 py-3 w-32">
-                            <FormField
-                              control={form.control}
-                              name={`medications.${index}.frequency`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input {...field} className={inputCls} placeholder="Ex: 8/8h" />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </td>
-                          <td className="px-4 py-3 w-32">
-                            <FormField
-                              control={form.control}
-                              name={`medications.${index}.route`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input {...field} className={inputCls} placeholder="VO, EV..." />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </td>
-                          <td className="px-4 py-3 w-32">
-                            <FormField
-                              control={form.control}
-                              name={`medications.${index}.status`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger className={inputCls}>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="active">Ativo</SelectItem>
-                                      <SelectItem value="paused">Pausado</SelectItem>
-                                      <SelectItem value="suspended">Suspenso</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </FormItem>
-                              )}
-                            />
-                          </td>
-                          <td className="px-4 py-3 w-24">
-                            <FormField
-                              control={form.control}
-                              name={`medications.${index}.is_critical`}
-                              render={({ field }) => (
-                                <FormItem className="flex items-center gap-2">
-                                  <FormControl>
-                                    <Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} />
-                                  </FormControl>
-                                  <FormLabel className="text-xs text-rose-600">Sim</FormLabel>
-                                </FormItem>
-                              )}
-                            />
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="text-slate-300 hover:text-rose-500"
-                              onClick={() => removeMed(index)}
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+            <CardContent className="pt-4 flex flex-wrap gap-2">
+              {devices.length === 0 && <span className="text-xs text-slate-500">Nenhum dispositivo marcado.</span>}
+              {devices.map((d: string) => (
+                <Badge key={d} className="bg-emerald-100 text-emerald-700">{d}</Badge>
+              ))}
             </CardContent>
           </Card>
         </div>
 
-        {/* COLUNA DIREITA */}
-        <div className="col-span-12 lg:col-span-4 space-y-6">
-          {/* Escalas de risco */}
-          <Card className="border border-slate-200 rounded-md shadow-fluent">
-            <CardHeader className="border-b border-slate-100 pb-3 bg-white">
-              <CardTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-rose-700">
-                <ChartBar size={18} /> Escalas de Risco
-              </CardTitle>
+        {/* Coluna direita */}
+        <div className="space-y-6">
+          <Card className="shadow-fluent border-slate-200">
+            <CardHeader className="flex items-center justify-between border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2 text-base text-[#0F2B45]"><Gauge className="w-5 h-5" /> Escalas de Risco</CardTitle>
+              <Dialog open={openRisk} onOpenChange={setOpenRisk}>
+                <DialogTrigger asChild><Button size="sm" variant="outline">Nova Avaliação</Button></DialogTrigger>
+                <DialogContent className="sm:max-w-sm space-y-3">
+                  <DialogHeader><DialogTitle>Ajustar Scores</DialogTitle></DialogHeader>
+                  <div className="space-y-2">
+                    <Label>Braden</Label>
+                    <Input type="number" value={form.watch("risk_braden")} onChange={(e)=>updateRisk("risk_braden", Number(e.target.value))} />
+                    <Label>Morse</Label>
+                    <Input type="number" value={form.watch("risk_morse")} onChange={(e)=>updateRisk("risk_morse", Number(e.target.value))} />
+                  </div>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
-            <CardContent className="pt-5 space-y-5">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className={labelCls}>Braden (LPP)</span>
-                  <FormField
-                    control={form.control}
-                    name="risk_braden"
-                    render={({ field }) => (
-                      <FormItem className="w-20">
-                        <FormControl>
-                          <Input type="number" {...field} className={inputCls} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+            <CardContent className="space-y-4 pt-4">
+              <div className="p-3 rounded border border-slate-100 bg-slate-50">
+                <p className="text-xs text-slate-500">Braden</p>
+                <p className="text-lg font-semibold text-slate-800">{form.watch("risk_braden")}</p>
+                <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                  <div className="h-full bg-amber-500" style={{ width: `${(Number(form.watch("risk_braden")) / 23) * 100}%` }} />
                 </div>
-                <div className="h-2 rounded-full bg-rose-100 overflow-hidden">
-                  <div className="h-full bg-rose-500" style={{ width: `${Math.min(100, ((form.watch("risk_braden") || 0) / 23) * 100)}%` }} />
-                </div>
-                <p className="text-[11px] text-slate-500">0 a 23 pontos</p>
               </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className={labelCls}>Morse (Queda)</span>
-                  <FormField
-                    control={form.control}
-                    name="risk_morse"
-                    render={({ field }) => (
-                      <FormItem className="w-20">
-                        <FormControl>
-                          <Input type="number" {...field} className={inputCls} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+              <div className="p-3 rounded border border-slate-100 bg-slate-50">
+                <p className="text-xs text-slate-500">Morse</p>
+                <p className="text-lg font-semibold text-slate-800">{form.watch("risk_morse")}</p>
+                <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                  <div className="h-full bg-rose-500" style={{ width: `${Math.min(100, (Number(form.watch("risk_morse")) / 125) * 100)}%` }} />
                 </div>
-                <div className="h-2 rounded-full bg-amber-100 overflow-hidden">
-                  <div className="h-full bg-amber-500" style={{ width: `${Math.min(100, ((form.watch("risk_morse") || 0) / 125) * 100)}%` }} />
-                </div>
-                <p className="text-[11px] text-slate-500">0 a 125 pontos</p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Oxigenoterapia */}
-          <Card className="border border-sky-200 bg-sky-50/40 rounded-md shadow-fluent">
-            <CardHeader className="border-b border-sky-100 pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-sky-900">
-                <Wind size={18} /> Oxigenoterapia
-              </CardTitle>
+          <Card className="shadow-fluent border-slate-200">
+            <CardHeader className="flex items-center justify-between border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2 text-base text-[#0F2B45]"><Wind className="w-5 h-5" /> Suporte Ventilatório</CardTitle>
             </CardHeader>
-            <CardContent className="pt-4 space-y-4">
-              <FormField
-                control={form.control}
-                name="oxygen_usage"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                    <FormControl>
-                      <Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} />
-                    </FormControl>
-                    <FormLabel className="text-sm font-semibold text-slate-700">Paciente faz uso de O2?</FormLabel>
-                  </FormItem>
-                )}
-              />
-              {oxygenActive ? (
+            <CardContent className="space-y-3 pt-4">
+              <div className="flex items-center gap-2">
+                <Checkbox checked={oxygenOn} onCheckedChange={(v)=>form.setValue("oxygen_usage", !!v)} />
+                <span>Paciente em uso de O2?</span>
+              </div>
+              {oxygenOn && (
                 <div className="grid grid-cols-2 gap-3">
-                  <FormField
-                    control={form.control}
-                    name="oxygen_flow"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className={labelCls}>Fluxo (L/min)</FormLabel>
-                        <FormControl>
-                          <Input {...field} className={inputCls} placeholder="Ex: 2 L/min" />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="oxygen_equipment"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className={labelCls}>Equipamento</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className={inputCls}>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Cilindro">Cilindro</SelectItem>
-                            <SelectItem value="Concentrador">Concentrador</SelectItem>
-                            <SelectItem value="Bipap">Bipap/Cpap</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              ) : (
-                <div className="text-[12px] text-slate-500 flex items-center gap-1">
-                  <WarningCircle weight="fill" className="text-slate-400" /> Sem oxigenoterapia ativa.
+                  <FormField control={form.control} name="oxygen_mode" render={({ field }) => (
+                    <FormItem><FormLabel>Modo</FormLabel><FormControl><Input {...field} placeholder="Cilindro/Concentrador" /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="oxygen_interface" render={({ field }) => (
+                    <FormItem><FormLabel>Interface</FormLabel><FormControl><Input {...field} placeholder="Cateter/Máscara" /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="oxygen_flow" render={({ field }) => (
+                    <FormItem><FormLabel>Fluxo (L/min)</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="oxygen_regime" render={({ field }) => (
+                    <FormItem><FormLabel>Regime</FormLabel><FormControl><Input {...field} placeholder="Contínuo/Noturno" /></FormControl></FormItem>
+                  )} />
                 </div>
               )}
             </CardContent>
           </Card>
-        </div>
 
-        <div className="fixed bottom-6 right-8 shadow-2xl z-50">
-          <Button type="submit" className="bg-[#D46F5D] text-white shadow-lg hover:bg-[#c05846] px-6 py-4 rounded-full font-bold flex items-center gap-2">
-            Salvar Prontuário Clínico
-          </Button>
+          <Button type="submit" className="w-full bg-[#0F2B45] text-white">Salvar alterações</Button>
         </div>
       </form>
     </Form>

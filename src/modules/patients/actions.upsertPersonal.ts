@@ -12,17 +12,49 @@ export async function upsertPersonalAction(data: PatientPersonalDTO) {
     return { success: false, error: "Dados inválidos: " + JSON.stringify(parsed.error.format()) };
   }
 
-  const { patient_id, ...updates } = parsed.data;
+  const { patient_id, civil_documents, ...updates } = parsed.data;
 
-  const { error } = await supabase
+  // Atualiza dados principais do paciente
+  const { error: patientError } = await supabase
     .from('patients')
     .update(updates)
     .eq('id', patient_id);
 
-  if (error) {
-    console.error("Erro Update Personal:", error);
-    return { success: false, error: error.message };
+  if (patientError) {
+    console.error("Erro Update Personal:", patientError);
+    return { success: false, error: patientError.message };
   }
+
+  // Sincroniza documentos civis extras (se fornecidos)
+  if (civil_documents && civil_documents.length > 0) {
+    const { data: patientRow } = await supabase.from('patients').select('tenant_id').eq('id', patient_id).maybeSingle();
+    const tenantId = (patientRow as any)?.tenant_id;
+
+    if (!tenantId) {
+      console.warn("Tenant não encontrado para inserir documentos civis.");
+    } else {
+      const docsToUpsert = civil_documents.map((doc) => ({
+        id: doc.id,
+        patient_id,
+        tenant_id: tenantId,
+        doc_type: (doc as any).doc_type || (doc as any).docType,
+        doc_number: (doc as any).doc_number || (doc as any).docNumber,
+        issuer: (doc as any).issuer,
+        issued_at: (doc as any).issued_at || (doc as any).issuedAt,
+        valid_until: (doc as any).valid_until || (doc as any).validUntil,
+      }));
+
+      const { error: docError } = await supabase
+        .from("patient_civil_documents")
+        .upsert(docsToUpsert, { onConflict: "id" });
+
+      if (docError) {
+        console.error("Erro ao salvar documentos civis:", docError);
+        return { success: false, error: docError.message };
+      }
+    }
+  }
+
 
   revalidatePath(`/patients/${patient_id}`);
   return { success: true };

@@ -1,326 +1,421 @@
-'use client'
+'use client';
 
-import { Resolver, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { PatientAddressSchema, PatientAddressDTO } from "@/data/definitions/address";
-import { upsertAddressAction } from "@/modules/patients/actions.upsertAddress";
-import { FullPatientDetails } from "@/modules/patients/patient.data";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import { MapPin, House, Truck, Warning, WifiHigh, PawPrint, Bed, Plugs, Drop, Moon, Key } from "@phosphor-icons/react";
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { PatientAddressZ, PatientAddressForm } from '@/schemas/patient.address';
+import { upsertAddress } from '@/app/(app)/patients/actions.upsertAddress';
+import { FullPatientDetails } from '@/modules/patients/patient.data';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
+import { MapPin, Truck, Shield, Lightning as Zap, FloppyDisk as Save } from '@phosphor-icons/react';
 
 export function TabAddress({ patient }: { patient: FullPatientDetails }) {
-    // Helpers seguros para extrair dados (o array pode vir vazio do banco)
-    const address = patient?.address?.[0] || {};
-    
-    // Tipagem segura para acessar as relações que adicionamos no patient.data.ts
-    // (Assumindo que você atualizou o select lá para trazer domicile e household)
-    const domicile = patient?.domicile?.[0] || {};
-    
-    const form = useForm<PatientAddressDTO>({
-        resolver: zodResolver(PatientAddressSchema) as Resolver<PatientAddressDTO>,
-        defaultValues: {
-            patient_id: patient?.id,
-            // Endereço
-            zip_code: address.zip_code ?? '',
-            street: address.street ?? '',
-            number: address.number ?? '',
-            neighborhood: address.neighborhood ?? '',
-            city: address.city ?? '',
-            state: address.state ?? '',
-            complement: address.complement ?? '',
-            reference_point: address.reference_point ?? '',
-            zone_type: address.zone_type ?? 'Urbana',
-            travel_notes: address.travel_notes ?? '',
-            
-            // Logística
-            ambulance_access: domicile.ambulance_access ?? 'Sim',
-            team_parking: domicile.team_parking ?? '',
-            night_access_risk: domicile.night_access_risk ?? 'Baixo',
-            entry_procedure: domicile.entry_procedure ?? '',
-            
-            // Infraestrutura
-            bed_type: domicile.bed_type ?? '',
-            mattress_type: domicile.mattress_type ?? '',
-            voltage: domicile.voltage ?? '',
-            backup_power_source: domicile.backup_power_source ?? '',
-            water_source: domicile.water_source ?? '',
-            has_wifi: domicile.has_wifi ?? false,
-            
-            // Social / Risco
-            has_smokers: domicile.has_smokers ?? false,
-            pets_description: domicile.pets_description ?? '',
-            animals_behavior: domicile.animals_behavior ?? '',
-            general_observations: domicile.general_observations ?? '',
-            
-            // Membros (Inicialmente vazio na edição para não complicar, pode ser expandido depois)
-            household_members: [] 
-        }
-    });
+  const toast = useToast();
+  const [isSaving, setIsSaving] = useState(false);
 
-    async function onSubmit(data: PatientAddressDTO) {
-        const promise = upsertAddressAction(data);
-        toast.promise(promise, {
-            loading: 'Salvando endereço...',
-            success: (res) => {
-                if (!res.success) throw new Error(res.error);
-                return "Endereço e logística atualizados!";
-            },
-            error: (err) => err.message
-        });
+  const addr = (patient.address?.[0] as any) ?? {};
+  const dom = (patient.domicile?.[0] as any) ?? {};
+
+  const defaultValues: PatientAddressForm = {
+    patientId: patient.id,
+    tenantId: (patient as any)?.tenant_id,
+    zipCode: addr.zip_code || '',
+    addressLine: addr.street || '',
+    number: addr.number || '',
+    neighborhood: addr.neighborhood || '',
+    city: addr.city || '',
+    state: addr.state || '',
+    complement: addr.complement || '',
+    referencePoint: addr.reference_point || '',
+    zoneType: addr.zone_type || 'Urbana',
+    travelNotes: addr.travel_notes || '',
+    propertyType: addr.property_type || undefined,
+    condoName: addr.condo_name || '',
+    blockTower: addr.block_tower || '',
+    floorNumber: addr.floor_number || undefined,
+    unitNumber: addr.unit_number || '',
+    ambulanceAccess: dom.ambulance_access || 'Sim - Total',
+    wheelchairAccess: addr.wheelchair_access || 'Livre',
+    elevatorStatus: addr.elevator_status || 'Não tem',
+    streetAccessType: addr.street_access_type || 'Rua Larga',
+    parking: addr.parking || '',
+    teamParking: dom.team_parking || '',
+    has24hConcierge: addr.has_24h_concierge ?? false,
+    conciergeContact: addr.concierge_contact || '',
+    entryProcedure: addr.entry_procedure || dom.entry_procedure || '',
+    nightAccessRisk: addr.night_access_risk || dom.night_access_risk || 'Baixo',
+    areaRiskType: addr.area_risk_type || 'Baixo',
+    worksOrObstacles: addr.works_or_obstacles || '',
+    hasWifi: addr.has_wifi ?? dom.has_wifi ?? false,
+    hasSmokers: addr.has_smokers ?? dom.has_smokers ?? false,
+    electricInfra: addr.electric_infra || dom.electric_infra || undefined,
+    backupPower: addr.backup_power || undefined,
+    cellSignalQuality: addr.cell_signal_quality || undefined,
+    powerOutletsDesc: addr.power_outlets_desc || '',
+    equipmentSpace: addr.equipment_space || undefined,
+    waterSource: addr.water_source || dom.water_source || '',
+    adaptedBathroom: addr.adapted_bathroom ?? false,
+    stayLocation: addr.stay_location || '',
+    pets: addr.pets || dom.pets_description || '',
+    notes: addr.notes || dom.general_observations || '',
+    bedType: dom.bed_type || '',
+    mattressType: dom.mattress_type || '',
+    voltage: dom.voltage || '',
+    backupPowerSource: dom.backup_power_source || '',
+    petsDescription: dom.pets_description || '',
+    animalsBehavior: dom.animals_behavior || '',
+    generalObservations: dom.general_observations || '',
+  };
+
+  const form = useForm<PatientAddressForm>({
+    resolver: zodResolver(PatientAddressZ) as any,
+    defaultValues,
+  });
+
+  async function onSubmit(data: PatientAddressForm) {
+    setIsSaving(true);
+    try {
+      const res = await upsertAddress(data);
+      if (res?.success === false) throw new Error(res.error);
+      toast("Endereço salvo", { description: "Dados de logística atualizados com sucesso." });
+    } catch (error) {
+      toast("Erro ao salvar", { description: "Tente novamente.", action: { label: "Fechar", onClick: () => {} } });
+    } finally {
+      setIsSaving(false);
     }
+  }
 
-    return (
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="pb-20">
-                <div className="grid grid-cols-12 gap-6">
-                    {/* COLUNA ESQUERDA */}
-                    <div className="col-span-12 lg:col-span-8 space-y-6">
-                        {/* Mapa + Endereço */}
-                        <div className="bg-white border border-slate-200 rounded-md shadow-fluent">
-                            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/30 flex items-center gap-2 text-[#0F2B45] font-bold uppercase text-xs tracking-wide">
-                                <MapPin className="h-4 w-4" /> Localização (PAD)
-                            </div>
-                            <div className="p-5 grid grid-cols-12 gap-4">
-                                <div className="col-span-12">
-                                    <div className="h-40 bg-slate-100 rounded-md border border-slate-200 relative flex items-center justify-center text-slate-400 text-sm font-semibold">
-                                        <span>Mapa / Street View</span>
-                                        <button type="button" className="absolute bottom-2 right-2 text-xs font-semibold text-[#0F2B45] bg-white border border-slate-200 rounded px-3 py-1 shadow-sm">
-                                            Ver no mapa
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="col-span-3">
-                                    <FormField control={form.control} name="zip_code" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-xs font-bold uppercase text-slate-500">CEP</FormLabel><FormControl><Input {...field} className="h-9 text-sm" /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                </div>
-                                <div className="col-span-7">
-                                    <FormField control={form.control} name="street" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-xs font-bold uppercase text-slate-500">Logradouro</FormLabel><FormControl><Input {...field} className="h-9 text-sm" /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                </div>
-                                <div className="col-span-2">
-                                    <FormField control={form.control} name="number" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-xs font-bold uppercase text-slate-500">Número</FormLabel><FormControl><Input {...field} className="h-9 text-sm" /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                </div>
-
-                                <div className="col-span-4">
-                                    <FormField control={form.control} name="neighborhood" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-xs font-bold uppercase text-slate-500">Bairro</FormLabel><FormControl><Input {...field} className="h-9 text-sm" /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                </div>
-                                <div className="col-span-4">
-                                    <FormField control={form.control} name="city" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-xs font-bold uppercase text-slate-500">Cidade</FormLabel><FormControl><Input {...field} className="h-9 text-sm" /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                </div>
-                                <div className="col-span-2">
-                                    <FormField control={form.control} name="state" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-xs font-bold uppercase text-slate-500">UF</FormLabel><FormControl><Input {...field} maxLength={2} className="h-9 text-sm uppercase" /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                </div>
-                                <div className="col-span-2">
-                                    <FormField control={form.control} name="zone_type" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs font-bold uppercase text-slate-500">Zona</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl><SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="Urbana">Urbana</SelectItem>
-                                                    <SelectItem value="Rural">Rural</SelectItem>
-                                                    <SelectItem value="Comunidade">Comunidade</SelectItem>
-                                                    <SelectItem value="Risco">Área de Risco</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </FormItem>
-                                    )} />
-                                </div>
-
-                                <div className="col-span-6">
-                                    <FormField control={form.control} name="complement" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-xs font-bold uppercase text-slate-500">Complemento</FormLabel><FormControl><Input {...field} className="h-9 text-sm" /></FormControl></FormItem>
-                                    )} />
-                                </div>
-                                <div className="col-span-6">
-                                    <FormField control={form.control} name="reference_point" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-xs font-bold uppercase text-slate-500">Ponto de Referência</FormLabel><FormControl><Input {...field} className="h-9 text-sm" /></FormControl></FormItem>
-                                    )} />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Logística */}
-                        <div className="bg-white border border-slate-200 rounded-md shadow-fluent">
-                            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/30 flex items-center gap-2 text-[#0F2B45] font-bold uppercase text-xs tracking-wide">
-                                <Truck className="h-4 w-4" /> Logística de Acesso
-                            </div>
-                            <div className="p-5 grid grid-cols-12 gap-4">
-                                <div className="col-span-12 md:col-span-4">
-                                    <FormField control={form.control} name="ambulance_access" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs font-bold uppercase text-slate-500">Acesso Ambulância?</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl><SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="Sim">Sim (Total)</SelectItem>
-                                                    <SelectItem value="Parcial">Parcial (Sem maca)</SelectItem>
-                                                    <SelectItem value="Não">Não (A pé)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </FormItem>
-                                    )} />
-                                </div>
-                                <div className="col-span-12 md:col-span-4">
-                                    <FormField control={form.control} name="team_parking" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs font-bold uppercase text-slate-500">Estacionamento Equipe</FormLabel>
-                                            <FormControl><Input {...field} className="h-9 text-sm" placeholder="Ex: Na rua, fácil" /></FormControl>
-                                        </FormItem>
-                                    )} />
-                                </div>
-                                <div className="col-span-12 md:col-span-4">
-                                    <FormField control={form.control} name="night_access_risk" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className={`text-xs font-bold uppercase ${field.value === 'Alto' ? "text-rose-600" : "text-slate-500"}`}>Risco Noturno</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl><SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="Baixo">Baixo <Moon className="inline ml-2 w-3 h-3" /></SelectItem>
-                                                    <SelectItem value="Médio">Médio</SelectItem>
-                                                    <SelectItem value="Alto">Alto (Periculosidade)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </FormItem>
-                                    )} />
-                                </div>
-                                <div className="col-span-12 md:col-span-6">
-                                    <FormField control={form.control} name="entry_procedure" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1"><Key className="h-4 w-4" /> Procedimento de Entrada</FormLabel>
-                                            <FormControl><Input {...field} className="h-9 text-sm" placeholder="Portaria, senha, contato..." /></FormControl>
-                                        </FormItem>
-                                    )} />
-                                </div>
-                                <div className="col-span-12">
-                                    <FormField control={form.control} name="travel_notes" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs font-bold uppercase text-slate-500">Notas de Viagem (Instruções para a equipe)</FormLabel>
-                                            <FormControl><Textarea {...field} className="text-sm" placeholder="Ex: Rua sem saída, entrar pela portaria 2..." /></FormControl>
-                                        </FormItem>
-                                    )} />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* COLUNA DIREITA */}
-                    <div className="col-span-12 lg:col-span-4 space-y-6">
-                        <div className="bg-white border border-slate-200 border-t-4 border-t-amber-400 rounded-md shadow-fluent">
-                            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/30 flex items-center gap-2 text-[#0F2B45] font-bold uppercase text-xs tracking-wide">
-                                <House className="h-4 w-4" /> Domicílio & Infraestrutura
-                            </div>
-                            <div className="p-5 space-y-4">
-                                <div className="flex flex-wrap gap-3">
-                                    <FormField control={form.control} name="has_wifi" render={({ field }) => (
-                                        <FormItem className="flex items-center space-x-2 rounded border border-slate-200 bg-slate-50 px-3 py-2">
-                                            <FormControl>
-                                                <Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} />
-                                            </FormControl>
-                                            <FormLabel className="text-xs font-semibold flex items-center gap-1"><WifiHigh /> Wi-Fi</FormLabel>
-                                        </FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="has_smokers" render={({ field }) => (
-                                        <FormItem className="flex items-center space-x-2 rounded border border-slate-200 bg-slate-50 px-3 py-2">
-                                            <FormControl>
-                                                <Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} />
-                                            </FormControl>
-                                            <FormLabel className="text-xs font-semibold text-amber-700 flex items-center gap-1"><Warning /> Fumantes</FormLabel>
-                                        </FormItem>
-                                    )} />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <FormField control={form.control} name="voltage" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs font-bold uppercase text-slate-500 flex gap-1 items-center"><Plugs /> Voltagem</FormLabel>
-                                            <FormControl><Input {...field} className="h-9 text-sm" placeholder="110v / 220v" /></FormControl>
-                                        </FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="water_source" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs font-bold uppercase text-slate-500 flex gap-1 items-center"><Drop /> Água</FormLabel>
-                                            <FormControl><Input {...field} className="h-9 text-sm" placeholder="Rede pública" /></FormControl>
-                                        </FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="backup_power_source" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs font-bold uppercase text-slate-500">Fonte Reserva</FormLabel>
-                                            <FormControl><Input {...field} className="h-9 text-sm" placeholder="Gerador, nobreak..." /></FormControl>
-                                        </FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="mattress_type" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs font-bold uppercase text-slate-500">Colchão</FormLabel>
-                                            <FormControl><Input {...field} className="h-9 text-sm" placeholder="Pneumático, visco..." /></FormControl>
-                                        </FormItem>
-                                    )} />
-                                </div>
-
-                                <FormField control={form.control} name="bed_type" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs font-bold uppercase text-slate-500 flex gap-2 items-center"><Bed /> Tipo de Cama</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl><SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="Comum">Comum</SelectItem>
-                                                <SelectItem value="Hospitalar Manual">Hospitalar Manual</SelectItem>
-                                                <SelectItem value="Hospitalar Elétrica">Hospitalar Elétrica</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </FormItem>
-                                )} />
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <FormField control={form.control} name="pets_description" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs font-bold uppercase text-slate-500 flex gap-2 items-center"><PawPrint /> Animais</FormLabel>
-                                            <FormControl><Input {...field} className="h-9 text-sm" placeholder="2 gatos, 1 cão" /></FormControl>
-                                        </FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="animals_behavior" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs font-bold uppercase text-slate-500">Comportamento</FormLabel>
-                                            <FormControl><Input {...field} className="h-9 text-sm" placeholder="Dóceis / Bravos" /></FormControl>
-                                        </FormItem>
-                                    )} />
-                                </div>
-
-                                <FormField control={form.control} name="general_observations" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs font-bold uppercase text-slate-500">Observações Gerais</FormLabel>
-                                        <FormControl><Textarea {...field} className="text-sm" placeholder="Ex: Portão pesado, campainha não funciona..." /></FormControl>
-                                    </FormItem>
-                                )} />
-                            </div>
-                        </div>
-                    </div>
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Coluna Esquerda */}
+          <div className="space-y-6">
+            <Card className="shadow-fluent border-slate-200">
+              <CardHeader className="pb-4 border-b border-slate-100 bg-slate-50/50">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  <div>
+                    <CardTitle className="text-base font-semibold text-slate-800">Endereço & Imóvel</CardTitle>
+                    <CardDescription>Dados geográficos e tipologia do domicílio.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div className="h-40 bg-slate-100 rounded-md border border-slate-200 relative flex items-center justify-center text-slate-400 text-sm font-semibold mb-2">
+                  <span>Mapa / Street View</span>
+                  <button type="button" className="absolute bottom-2 right-2 text-xs font-semibold text-[#0F2B45] bg-white border border-slate-200 rounded px-3 py-1 shadow-sm">
+                    Ver no mapa
+                  </button>
                 </div>
 
-                {/* BOTÃO FLUTUANTE */}
-                <div className="fixed bottom-6 right-8 shadow-2xl z-50">
-                    <Button type="submit" className="bg-[#D46F5D] hover:bg-[#c05846] text-white px-6 py-4 rounded-full font-bold flex items-center gap-2 shadow-lg">
-                        Salvar Dados de Endereço
-                    </Button>
+                <div className="grid grid-cols-12 gap-4">
+                  <div className="col-span-4">
+                    <FormField control={form.control} name="zipCode" render={({ field }) => (
+                      <FormItem><FormLabel>CEP</FormLabel><FormControl><Input {...field} placeholder="00000-000" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
+                  <div className="col-span-8">
+                    <FormField control={form.control} name="city" render={({ field }) => (
+                      <FormItem><FormLabel>Cidade</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
+                  <div className="col-span-12">
+                    <FormField control={form.control} name="addressLine" render={({ field }) => (
+                      <FormItem><FormLabel>Logradouro</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
+                  <div className="col-span-4">
+                    <FormField control={form.control} name="number" render={({ field }) => (
+                      <FormItem><FormLabel>Número</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
+                  <div className="col-span-8">
+                    <FormField control={form.control} name="neighborhood" render={({ field }) => (
+                      <FormItem><FormLabel>Bairro</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
+                  <div className="col-span-4">
+                    <FormField control={form.control} name="state" render={({ field }) => (
+                      <FormItem><FormLabel>UF</FormLabel><FormControl><Input {...field} maxLength={2} className="uppercase" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
+                  <div className="col-span-4">
+                    <FormField control={form.control} name="zoneType" render={({ field }) => (
+                      <FormItem><FormLabel>Zona</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                        <SelectItem value="Urbana">Urbana</SelectItem>
+                        <SelectItem value="Rural">Rural</SelectItem>
+                        <SelectItem value="Periurbana">Periurbana</SelectItem>
+                        <SelectItem value="Comunidade">Comunidade</SelectItem>
+                        <SelectItem value="Risco">Área de Risco</SelectItem>
+                      </SelectContent></Select><FormMessage /></FormItem>
+                    )} />
+                  </div>
                 </div>
-            </form>
-        </Form>
-    );
+
+                <div className="bg-slate-50 p-4 rounded-md border border-slate-200 space-y-4">
+                  <h4 className="text-xs font-semibold uppercase text-slate-500">Detalhes do Imóvel</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name="propertyType" render={({ field }) => (
+                      <FormItem><FormLabel>Tipo</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                        <SelectItem value="Casa">Casa</SelectItem>
+                        <SelectItem value="Apartamento">Apartamento</SelectItem>
+                        <SelectItem value="Chácara/Sítio">Chácara/Sítio</SelectItem>
+                        <SelectItem value="ILPI">ILPI</SelectItem>
+                        <SelectItem value="Pensão">Pensão</SelectItem>
+                        <SelectItem value="Outro">Outro</SelectItem>
+                      </SelectContent></Select><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="condoName" render={({ field }) => (
+                      <FormItem><FormLabel>Condomínio</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="blockTower" render={({ field }) => (
+                      <FormItem><FormLabel>Bloco</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="unitNumber" render={({ field }) => (
+                      <FormItem><FormLabel>Apto/Unidade</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="complement" render={({ field }) => (
+                    <FormItem><FormLabel>Complemento</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="referencePoint" render={({ field }) => (
+                    <FormItem><FormLabel>Ponto de Referência</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  )} />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-fluent border-slate-200">
+              <CardHeader className="pb-4 border-b border-slate-100 bg-slate-50/50">
+                <div className="flex items-center gap-2">
+                  <Truck className="w-5 h-5 text-indigo-600" />
+                  <div>
+                    <CardTitle className="text-base font-semibold text-slate-800">Acessibilidade & Segurança</CardTitle>
+                    <CardDescription>Informações críticas para transporte e ambulância.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField control={form.control} name="ambulanceAccess" render={({ field }) => (
+                    <FormItem><FormLabel>Acesso Ambulância</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                      <SelectItem value="Sim - Total">Sim - Total</SelectItem>
+                      <SelectItem value="Sim - Parcial">Sim - Parcial</SelectItem>
+                      <SelectItem value="Não">Não</SelectItem>
+                    </SelectContent></Select></FormItem>
+                  )} />
+                  <FormField control={form.control} name="wheelchairAccess" render={({ field }) => (
+                    <FormItem><FormLabel>Acesso Maca/Cadeira</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                      <SelectItem value="Livre">Livre</SelectItem>
+                      <SelectItem value="Com restrição">Com restrição</SelectItem>
+                      <SelectItem value="Incompatível">Incompatível</SelectItem>
+                    </SelectContent></Select></FormItem>
+                  )} />
+                  <FormField control={form.control} name="nightAccessRisk" render={({ field }) => (
+                    <FormItem><FormLabel className={field.value === 'Alto' ? 'text-red-600' : ''}>Risco Noturno</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                      <SelectItem value="Baixo">Baixo</SelectItem>
+                      <SelectItem value="Médio">Médio</SelectItem>
+                      <SelectItem value="Alto">Alto</SelectItem>
+                    </SelectContent></Select></FormItem>
+                  )} />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField control={form.control} name="floorNumber" render={({ field }) => (
+                    <FormItem><FormLabel>Andar</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="elevatorStatus" render={({ field }) => (
+                    <FormItem className="col-span-2"><FormLabel>Elevador</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                      <SelectItem value="Não tem">Não tem</SelectItem>
+                      <SelectItem value="Tem - Não comporta maca">Tem - Não comporta maca</SelectItem>
+                      <SelectItem value="Tem - Comporta maca">Tem - Comporta maca</SelectItem>
+                    </SelectContent></Select></FormItem>
+                  )} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="streetAccessType" render={({ field }) => (
+                    <FormItem><FormLabel>Tipo de Rua</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                      <SelectItem value="Rua Larga">Rua Larga</SelectItem>
+                      <SelectItem value="Rua Estreita">Rua Estreita</SelectItem>
+                      <SelectItem value="Rua sem Saída">Rua sem Saída</SelectItem>
+                      <SelectItem value="Viela">Viela</SelectItem>
+                      <SelectItem value="Estrada de Terra">Estrada de Terra</SelectItem>
+                    </SelectContent></Select></FormItem>
+                  )} />
+                  <FormField control={form.control} name="teamParking" render={({ field }) => (
+                    <FormItem><FormLabel>Estacionamento Equipe</FormLabel><FormControl><Input {...field} placeholder="Ex: Na rua, fácil" /></FormControl></FormItem>
+                  )} />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 items-center">
+                  <FormField control={form.control} name="has24hConcierge" render={({ field }) => (
+                    <div className="flex items-center justify-between col-span-3 border p-3 rounded-md">
+                      <div className="space-y-0.5">
+                        <FormLabel>Portaria 24h</FormLabel>
+                        <p className="text-xs text-slate-500">Existe controle de acesso noturno?</p>
+                      </div>
+                      <FormControl>
+                        <Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} />
+                      </FormControl>
+                    </div>
+                  )} />
+                  <FormField control={form.control} name="conciergeContact" render={({ field }) => (
+                    <FormItem><FormLabel>Contato Portaria</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="entryProcedure" render={({ field }) => (
+                    <FormItem className="col-span-2"><FormLabel>Procedimento de Entrada</FormLabel><FormControl><Input {...field} placeholder="Ex: RG na portaria, senha 1234..." /></FormControl></FormItem>
+                  )} />
+                </div>
+
+                <FormField control={form.control} name="worksOrObstacles" render={({ field }) => (
+                  <FormItem><FormLabel>Notas de Viagem (Motorista)</FormLabel><FormControl><Textarea {...field} placeholder="Ex: Entrar pela portaria 2, rua esburacada..." className="h-20" /></FormControl></FormItem>
+                )} />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Coluna Direita */}
+          <div className="space-y-6">
+            <Card className="shadow-fluent border-slate-200">
+              <CardHeader className="pb-4 border-b border-slate-100 bg-slate-50/50">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-emerald-600" />
+                  <div>
+                    <CardTitle className="text-base font-semibold text-slate-800">Segurança & Portaria</CardTitle>
+                    <CardDescription>Controle de entrada e riscos.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="areaRiskType" render={({ field }) => (
+                    <FormItem><FormLabel>Risco da Área</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                      <SelectItem value="Baixo">Baixo</SelectItem>
+                      <SelectItem value="Médio">Médio</SelectItem>
+                      <SelectItem value="Alto">Alto</SelectItem>
+                    </SelectContent></Select></FormItem>
+                  )} />
+                  <FormField control={form.control} name="parking" render={({ field }) => (
+                    <FormItem><FormLabel>Vaga / Garagem</FormLabel><FormControl><Input {...field} placeholder="Descrição breve" /></FormControl></FormItem>
+                  )} />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-fluent border-slate-200">
+              <CardHeader className="pb-4 border-b border-slate-100 bg-slate-50/50">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-amber-500" />
+                  <div>
+                    <CardTitle className="text-base font-semibold text-slate-800">Condições Ambientais</CardTitle>
+                    <CardDescription>Energia, conectividade e leito.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div className="grid grid-cols-3 gap-3">
+                  <FormField control={form.control} name="hasWifi" render={({ field }) => (
+                    <div className="flex items-center space-x-2 border p-2 rounded"><FormControl><Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} /></FormControl><Label>Wi-Fi</Label></div>
+                  )} />
+                  <FormField control={form.control} name="hasSmokers" render={({ field }) => (
+                    <div className="flex items-center space-x-2 border p-2 rounded"><FormControl><Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} /></FormControl><Label>Fumantes</Label></div>
+                  )} />
+                  <FormField control={form.control} name="adaptedBathroom" render={({ field }) => (
+                    <div className="flex items-center space-x-2 border p-2 rounded"><FormControl><Checkbox checked={!!field.value} onCheckedChange={(val) => field.onChange(!!val)} /></FormControl><Label>Banheiro Adapt.</Label></div>
+                  )} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="electricInfra" render={({ field }) => (
+                    <FormItem><FormLabel>Voltagem</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                      <SelectItem value="110v">110v</SelectItem>
+                      <SelectItem value="220v">220v</SelectItem>
+                      <SelectItem value="Bivolt">Bivolt</SelectItem>
+                      <SelectItem value="Instável">Instável</SelectItem>
+                    </SelectContent></Select></FormItem>
+                  )} />
+                  <FormField control={form.control} name="cellSignalQuality" render={({ field }) => (
+                    <FormItem><FormLabel>Sinal Celular</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                      <SelectItem value="Bom">Bom</SelectItem>
+                      <SelectItem value="Razoável">Razoável</SelectItem>
+                      <SelectItem value="Ruim">Ruim</SelectItem>
+                      <SelectItem value="Inexistente">Inexistente</SelectItem>
+                    </SelectContent></Select></FormItem>
+                  )} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="backupPower" render={({ field }) => (
+                    <FormItem><FormLabel>Fonte Reserva</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                      <SelectItem value="Nenhum">Nenhum</SelectItem>
+                      <SelectItem value="Gerador">Gerador</SelectItem>
+                      <SelectItem value="Nobreak">Nobreak</SelectItem>
+                      <SelectItem value="Rede Dupla">Rede Dupla</SelectItem>
+                    </SelectContent></Select></FormItem>
+                  )} />
+                  <FormField control={form.control} name="equipmentSpace" render={({ field }) => (
+                    <FormItem><FormLabel>Espaço p/ Equip.</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                      <SelectItem value="Adequado">Adequado</SelectItem>
+                      <SelectItem value="Restrito">Restrito</SelectItem>
+                      <SelectItem value="Crítico">Crítico</SelectItem>
+                    </SelectContent></Select></FormItem>
+                  )} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="powerOutletsDesc" render={({ field }) => (
+                    <FormItem><FormLabel>Tomadas no leito</FormLabel><FormControl><Input {...field} placeholder="Ex: 2 livres" /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="waterSource" render={({ field }) => (
+                    <FormItem><FormLabel>Fonte de água</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  )} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="stayLocation" render={({ field }) => (
+                    <FormItem><FormLabel>Tipo de cama/leito</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="mattressType" render={({ field }) => (
+                    <FormItem><FormLabel>Colchão</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  )} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="petsDescription" render={({ field }) => (
+                    <FormItem><FormLabel>Animais</FormLabel><FormControl><Input {...field} placeholder="Animais de estimação" /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="animalsBehavior" render={({ field }) => (
+                    <FormItem><FormLabel>Comportamento</FormLabel><FormControl><Input {...field} placeholder="Manso, agressivo..." /></FormControl></FormItem>
+                  )} />
+                </div>
+
+                <FormField control={form.control} name="notes" render={({ field }) => (
+                  <FormItem><FormLabel>Observações Gerais</FormLabel><FormControl><Textarea {...field} placeholder="Regras da casa, observações importantes" /></FormControl></FormItem>
+                )} />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-6 border-t mt-6">
+          <Button type="submit" disabled={isSaving} className="min-w-[180px]">
+            {isSaving ? "Salvando..." : (<><Save className="w-4 h-4 mr-2" />Salvar Alterações</>)}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
 }

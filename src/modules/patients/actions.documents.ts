@@ -14,7 +14,13 @@ export async function createDocumentRecordAction(data: PatientDocumentDTO) {
 
   const { error } = await supabase
     .from('patient_documents')
-    .insert(form);
+    .insert({
+      ...form,
+      confidential: form.confidential ?? false,
+      clinical_visible: form.clinical_visible ?? true,
+      status: form.status || 'Ativo',
+      origin: form.origin || 'Ficha',
+    });
 
   if (error) {
     console.error("Erro ao registrar documento:", error);
