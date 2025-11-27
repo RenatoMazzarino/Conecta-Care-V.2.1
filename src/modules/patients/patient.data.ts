@@ -61,7 +61,9 @@ export type PatientHouseholdMember = {
 export type PatientRelatedPersonRecord = {
   id: string;
   full_name: string;
+  contact_type?: string | null;
   relation?: string | null;
+  relation_description?: string | null;
   priority_order?: number | null;
   phone_primary?: string | null;
   phone_secondary?: string | null;
@@ -70,6 +72,7 @@ export type PatientRelatedPersonRecord = {
   is_legal_guardian?: boolean | null;
   is_financial_responsible?: boolean | null;
   is_emergency_contact?: boolean | null;
+  is_main_contact?: boolean | null;
   can_access_records?: boolean | null;
   can_authorize_procedures?: boolean | null;
   can_authorize_financial?: boolean | null;
@@ -89,6 +92,7 @@ export type PatientRelatedPersonRecord = {
   address_street?: string | null;
   address_city?: string | null;
   address_state?: string | null;
+  address_summary?: string | null;
 };
 
 export type CareTeamMemberRecord = {
@@ -100,6 +104,9 @@ export type CareTeamMemberRecord = {
   regime?: string | null;
   employment_type?: string | null;
   shift_summary?: string | null;
+  work_window?: string | null;
+  internal_extension?: string | null;
+  corporate_cell?: string | null;
   contact_phone?: string | null;
   contact_email?: string | null;
   start_date?: string | null;
@@ -588,6 +595,7 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
     clinicalAllergiesRes,
     clinicalRisksRes,
     contractorRes,
+    legalGuardianViewRes,
   ] = await Promise.all([
     supabase.from("patient_addresses").select("*").eq("patient_id", patientId),
     supabase.from("patient_domiciles").select("*").eq("patient_id", patientId),
@@ -613,6 +621,7 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
     patientRow?.primary_contractor_id
       ? supabase.from("contractors").select("id,name,type").eq("id", patientRow.primary_contractor_id).maybeSingle()
       : Promise.resolve({ data: null }),
+    supabase.from("view_patient_legal_guardian_summary").select("*").eq("patient_id", patientId).maybeSingle(),
   ]);
 
   // Busca separada para contatos (evita depender de FK configurada)
@@ -671,6 +680,8 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
         id: p.id,
         full_name: p.full_name,
         relation: p.relation,
+        relation_description: p.relation_description,
+        contact_type: p.contact_type,
         priority_order: p.priority_order,
         phone_primary: p.phone_primary,
         phone_secondary: p.phone_secondary,
@@ -679,6 +690,7 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
         is_legal_guardian: p.is_legal_guardian,
         is_financial_responsible: p.is_financial_responsible,
         is_emergency_contact: p.is_emergency_contact,
+        is_main_contact: p.is_main_contact,
         can_access_records: p.can_access_records,
         can_authorize_procedures: p.can_authorize_procedures,
         can_authorize_financial: p.can_authorize_financial,
@@ -698,6 +710,7 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
         address_street: p.address_street,
         address_city: p.address_city,
         address_state: p.address_state,
+        address_summary: p.address_summary,
       }))
     : [];
 
@@ -714,6 +727,9 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
         is_primary: t.is_primary,
         employment_type: t.employment_type,
         shift_summary: t.shift_summary,
+        work_window: t.work_window,
+        internal_extension: t.internal_extension,
+        corporate_cell: t.corporate_cell,
         contact_phone: t.contact_phone,
         contact_email: t.contact_email,
         start_date: t.start_date,
@@ -775,6 +791,7 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
     assigned_assets: assignedAssetsRes?.data || [],
     consumables: consumablesRes?.data || [],
     movements: movementsRes?.data || [],
+    legal_guardian_summary: legalGuardianViewRes?.data || null,
     status: (patientRow as any)?.status ?? (patientRow as any)?.record_status ?? null,
     civil_documents: civilDocs,
     related_persons: relatedPersons,

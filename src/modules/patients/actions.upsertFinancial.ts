@@ -16,6 +16,7 @@ export async function upsertFinancialAction(data: PatientFinancialProfileDTO) {
 
   const mapped = {
     patient_id,
+    responsible_related_person_id: payload.responsible_related_person_id,
     bond_type: payload.bond_type,
     insurer_name: payload.insurer_name,
     plan_name: payload.plan_name,
@@ -36,6 +37,7 @@ export async function upsertFinancialAction(data: PatientFinancialProfileDTO) {
     daily_interest_percent: payload.daily_interest_percent,
     discount_early_payment: payload.discount_early_payment,
     discount_days_limit: payload.discount_days_limit,
+    receiving_account_info: payload.receiving_account_info,
     financial_responsible_name: payload.financial_responsible_name,
     financial_responsible_contact: payload.financial_responsible_contact,
     payer_relation: payload.payer_relation,

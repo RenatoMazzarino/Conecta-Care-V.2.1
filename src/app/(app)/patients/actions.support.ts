@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { RelatedPersonZ, CareTeamMemberZ, RelatedPersonForm, CareTeamMemberForm } from "@/schemas/patient.support";
+import { cache } from "react";
 
 type SupabaseClientType = Awaited<ReturnType<typeof createClient>>;
 
@@ -26,7 +27,9 @@ export async function upsertRelatedPerson(data: RelatedPersonForm) {
       patient_id: payload.patientId,
       tenant_id: tenantId,
       full_name: payload.fullName,
+      contact_type: payload.contactType,
       relation: payload.relation,
+      relation_description: payload.relationDescription,
       priority_order: payload.priorityOrder,
       phone_primary: payload.phonePrimary,
       phone_secondary: payload.phoneSecondary,
@@ -35,6 +38,7 @@ export async function upsertRelatedPerson(data: RelatedPersonForm) {
       is_legal_guardian: payload.isLegalGuardian,
       is_financial_responsible: payload.isFinancialResponsible,
       is_emergency_contact: payload.isEmergencyContact,
+      is_main_contact: payload.isMainContact,
       can_access_records: payload.canAccessRecords,
       can_authorize_procedures: payload.canAuthorizeProcedures,
       can_authorize_financial: payload.canAuthorizeFinancial,
@@ -54,6 +58,7 @@ export async function upsertRelatedPerson(data: RelatedPersonForm) {
       address_street: payload.addressStreet,
       address_city: payload.addressCity,
       address_state: payload.addressState,
+      address_summary: payload.addressSummary,
     })
     .select()
     .single();
@@ -93,6 +98,9 @@ export async function upsertTeamMember(data: CareTeamMemberForm) {
       is_primary: payload.isPrimary,
       employment_type: payload.employmentType,
       shift_summary: payload.shiftSummary,
+      work_window: payload.workWindow,
+      internal_extension: payload.internalExtension,
+      corporate_cell: payload.corporateCell,
       contact_phone: payload.contactPhone,
       contact_email: payload.contactEmail,
       start_date: payload.startDate,
@@ -114,3 +122,18 @@ export async function deleteTeamMember(id: string) {
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
+
+// Lista resumida de profissionais para lookup
+export const getProfessionalsList = cache(async () => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("professionals").select("id, full_name, role");
+  if (error) {
+    console.error("Erro ao buscar profissionais:", error);
+    return [];
+  }
+  return (data || []).map((p) => ({
+    id: p.id as string,
+    name: `${p.full_name}${p.role ? ` (${p.role})` : ""}`,
+    category: p.role || "",
+  }));
+});

@@ -2,6 +2,7 @@
 /* eslint-disable react-hooks/incompatible-library */
 
 import { useFieldArray, useForm } from "react-hook-form";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PatientPersonalSchema, PatientPersonalDTO } from "@/data/definitions/personal";
 import { upsertPersonalAction } from "../../actions.upsertPersonal";
@@ -11,12 +12,20 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 
 export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
+  const calculateAge = (date?: Date) => {
+    if (!date) return "--";
+    const diff = Date.now() - date.getTime();
+    const ageDt = new Date(diff);
+    return Math.abs(ageDt.getUTCFullYear() - 1970);
+  };
+
   const form = useForm<PatientPersonalDTO>({
     resolver: zodResolver(PatientPersonalSchema) as any,
     defaultValues: {
@@ -26,8 +35,11 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
       display_name: patient.display_name ?? "",
       social_name: patient.social_name ?? "",
       salutation: patient.salutation ?? "",
-      pronouns: patient.pronouns ?? "",
+      gender_identity: (patient.gender_identity as any) ?? "Prefiro nao informar",
+      pronouns: (patient.pronouns as any) ?? "Outro",
+      marital_status: patient.civil_status as any,
       cpf: patient.cpf ?? "",
+      cpf_status_label: (patient as any).cpf_status_label ?? "",
       cpf_status: patient.cpf_status ?? "valid",
       rg: patient.rg ?? "",
       rg_issuer: patient.rg_issuer ?? "",
@@ -35,20 +47,27 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
       rg_issued_at: patient.rg_issued_at ? new Date(patient.rg_issued_at) : undefined,
       cns: patient.cns ?? "",
       national_id: patient.national_id ?? "",
+      doc_validation_source: (patient as any).doc_validation_source ?? "",
       document_validation_method: patient.document_validation_method ?? "manual",
       doc_validation_status: (patient.doc_validation_status as any) ?? "Pendente",
+      doc_validated_at: patient.doc_validated_at ?? undefined,
+      doc_validated_by: patient.doc_validated_by ?? "",
       date_of_birth: patient.date_of_birth ? new Date(patient.date_of_birth) : undefined,
-      gender: patient.gender ?? "Other",
-      gender_identity: patient.gender_identity ?? "",
-      civil_status: patient.civil_status ?? "",
+      gender: (() => {
+        if (patient.gender === "M") return "Masculino";
+        if (patient.gender === "F") return "Feminino";
+        if (patient.gender === "Other") return "Outro";
+        return (patient.gender as any) ?? "Não informado";
+      })(),
+      father_name: (patient as any).father_name ?? "",
       nationality: patient.nationality ?? "Brasileira",
-      place_of_birth: patient.place_of_birth ?? "",
       place_of_birth_city: patient.place_of_birth_city ?? "",
       place_of_birth_state: patient.place_of_birth_state ?? "",
       place_of_birth_country: patient.place_of_birth_country ?? "Brasil",
       preferred_language: patient.preferred_language ?? "Português",
       mother_name: patient.mother_name ?? "",
       photo_consent: patient.photo_consent ?? false,
+      photo_consent_date: (patient as any).photo_consent_date ?? undefined,
       mobile_phone: patient.mobile_phone ?? "",
       secondary_phone: patient.secondary_phone ?? "",
       email: patient.email ?? "",
@@ -56,7 +75,7 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
       accept_sms: patient.accept_sms ?? true,
       accept_email: patient.accept_email ?? true,
       block_marketing: patient.block_marketing ?? false,
-      education_level: patient.education_level ?? "",
+      education_level: (patient.education_level as any) ?? "Nao Informado",
       profession: patient.profession ?? "",
       race_color: (patient.race_color as any) ?? "Não declarado",
       is_pcd: patient.is_pcd ?? false,
@@ -78,6 +97,13 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
     name: "civil_documents",
   });
 
+  const watchConsentStatus = form.watch("marketing_consent_status") || "pending";
+  const hasConsentDefined = watchConsentStatus === "accepted" || watchConsentStatus === "rejected";
+  const [forceConsentEdit, setForceConsentEdit] = useState(false);
+  const consentHistoryText = (patient as any).marketing_consent_history || "";
+
+  const [isForeignDoc, setIsForeignDoc] = useState(false);
+
   async function onSubmit(data: PatientPersonalDTO) {
     const res = await upsertPersonalAction(data);
     if (res.success) toast.success("Dados pessoais atualizados!");
@@ -96,8 +122,23 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
             <CardDescription>Campos essenciais do prontuário.</CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <FormField control={form.control} name="salutation" render={({ field }) => (
+              <FormItem className="md:col-span-2 col-span-6">
+                <FormLabel className={labelCls}>Tratamento</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl><SelectTrigger className={inputCls}><SelectValue placeholder="Sr./Sra." /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="Sr.">Sr.</SelectItem>
+                    <SelectItem value="Sra.">Sra.</SelectItem>
+                    <SelectItem value="Sr(a).">Sr(a).</SelectItem>
+                    <SelectItem value="Dr.">Dr.</SelectItem>
+                    <SelectItem value="Dra.">Dra.</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}/>
             <FormField control={form.control} name="full_name" render={({ field }) => (
-              <FormItem className="md:col-span-8 col-span-12">
+              <FormItem className="md:col-span-6 col-span-12">
                 <FormLabel className={labelCls}>Nome Completo *</FormLabel>
                 <FormControl><Input {...field} className={inputCls} /></FormControl>
                 <FormMessage />
@@ -115,27 +156,99 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
                 <FormControl><Input {...field} className={inputCls} /></FormControl>
               </FormItem>
             )}/>
+            <FormField control={form.control} name="pronouns" render={({ field }) => (
+              <FormItem className="md:col-span-3 col-span-6">
+                <FormLabel className={labelCls}>Pronomes</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl><SelectTrigger className={inputCls}><SelectValue /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="Ela/Dela">Ela/Dela</SelectItem>
+                    <SelectItem value="Ele/Dele">Ele/Dele</SelectItem>
+                    <SelectItem value="Elu/Delu">Elu/Delu</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="gender_identity" render={({ field }) => (
+              <FormItem className="md:col-span-3 col-span-6">
+                <FormLabel className={labelCls}>Identidade de Gênero</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl><SelectTrigger className={inputCls}><SelectValue /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="Cisgenero">Cisgênero</SelectItem>
+                    <SelectItem value="Transgenero">Transgênero</SelectItem>
+                    <SelectItem value="Nao Binario">Não Binário</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
+                    <SelectItem value="Prefiro nao informar">Prefiro não informar</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}/>
             <FormField control={form.control} name="date_of_birth" render={({ field }) => (
               <FormItem className="md:col-span-3 col-span-6">
                 <FormLabel className={labelCls}>Data de Nascimento *</FormLabel>
                 <FormControl>
                   <Input type="date" value={field.value ? format(field.value, "yyyy-MM-dd") : ""} onChange={(e)=>field.onChange(e.target.value ? new Date(e.target.value):undefined)} className={inputCls}/>
                 </FormControl>
+                <p className="text-[11px] text-slate-500 mt-1">( {calculateAge(field.value)} anos )</p>
                 <FormMessage />
               </FormItem>
             )}/>
             <FormField control={form.control} name="gender" render={({ field }) => (
               <FormItem className="md:col-span-3 col-span-6">
-                <FormLabel className={labelCls}>Sexo *</FormLabel>
+                <FormLabel className={labelCls}>Sexo Biológico *</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl><SelectTrigger className={inputCls}><SelectValue /></SelectTrigger></FormControl>
                   <SelectContent>
-                    <SelectItem value="M">Masculino</SelectItem>
-                    <SelectItem value="F">Feminino</SelectItem>
-                    <SelectItem value="Other">Outro</SelectItem>
+                    <SelectItem value="Masculino">Masculino</SelectItem>
+                    <SelectItem value="Feminino">Feminino</SelectItem>
+                    <SelectItem value="Intersexo">Intersexo</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
+                    <SelectItem value="Não informado">Não informado</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="marital_status" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>Estado Civil</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl><SelectTrigger className={inputCls}><SelectValue /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
+                    <SelectItem value="Casado(a)">Casado(a)</SelectItem>
+                    <SelectItem value="União estável">União estável</SelectItem>
+                    <SelectItem value="Separado(a)">Separado(a)</SelectItem>
+                    <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
+                    <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="nationality" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>Nacionalidade</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="preferred_language" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>Idioma Preferido</FormLabel>
+                <FormControl><Input {...field} className={inputCls} placeholder="Português, Inglês..." /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="mother_name" render={({ field }) => (
+              <FormItem className="md:col-span-6 col-span-12">
+                <FormLabel className={labelCls}>Nome da Mãe</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="father_name" render={({ field }) => (
+              <FormItem className="md:col-span-6 col-span-12">
+                <FormLabel className={labelCls}>Nome do Pai</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
               </FormItem>
             )}/>
             <FormField control={form.control} name="race_color" render={({ field }) => (
@@ -157,7 +270,21 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
             <FormField control={form.control} name="education_level" render={({ field }) => (
               <FormItem className="md:col-span-4 col-span-12">
                 <FormLabel className={labelCls}>Escolaridade</FormLabel>
-                <FormControl><Input {...field} className={inputCls} placeholder="Fundamental, Médio, Superior..." /></FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl><SelectTrigger className={inputCls}><SelectValue /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="Nao Alfabetizado">Não Alfabetizado</SelectItem>
+                    <SelectItem value="Fundamental Incompleto">Fundamental Incompleto</SelectItem>
+                    <SelectItem value="Fundamental Completo">Fundamental Completo</SelectItem>
+                    <SelectItem value="Medio Incompleto">Médio Incompleto</SelectItem>
+                    <SelectItem value="Medio Completo">Médio Completo</SelectItem>
+                    <SelectItem value="Superior Incompleto">Superior Incompleto</SelectItem>
+                    <SelectItem value="Superior Completo">Superior Completo</SelectItem>
+                    <SelectItem value="Pos Graduacao">Pós Graduação</SelectItem>
+                    <SelectItem value="Mestrado/Doutorado">Mestrado/Doutorado</SelectItem>
+                    <SelectItem value="Nao Informado">Não Informado</SelectItem>
+                  </SelectContent>
+                </Select>
               </FormItem>
             )}/>
             <FormField control={form.control} name="profession" render={({ field }) => (
@@ -205,10 +332,32 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
             <CardDescription>RG, CPF e validação.</CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div className="md:col-span-12 flex items-center space-x-2">
+              <Checkbox checked={isForeignDoc} onCheckedChange={(v) => setIsForeignDoc(!!v)} />
+              <FormLabel className="text-xs font-semibold text-slate-600 uppercase">Documento Estrangeiro / Outro?</FormLabel>
+            </div>
+            {!isForeignDoc && (
+              <>
             <FormField control={form.control} name="cpf" render={({ field }) => (
               <FormItem className="md:col-span-4 col-span-12">
                 <FormLabel className={labelCls}>CPF</FormLabel>
                 <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
+            <FormField control={form.control} name="cpf_status_label" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>Status CPF</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl><SelectTrigger className={inputCls}><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="Regular">Regular</SelectItem>
+                    <SelectItem value="Pendente de Regularizacao">Pendente de Regularização</SelectItem>
+                    <SelectItem value="Suspenso">Suspenso</SelectItem>
+                    <SelectItem value="Cancelado">Cancelado</SelectItem>
+                    <SelectItem value="Titular Falecido">Titular Falecido</SelectItem>
+                    <SelectItem value="Nulo">Nulo</SelectItem>
+                  </SelectContent>
+                </Select>
               </FormItem>
             )}/>
             <FormField control={form.control} name="rg" render={({ field }) => (
@@ -237,12 +386,51 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
                 </FormControl>
               </FormItem>
             )}/>
+            <FormField control={form.control} name="cns" render={({ field }) => (
+              <FormItem className="md:col-span-4 col-span-12">
+                <FormLabel className={labelCls}>Cartão SUS (CNS)</FormLabel>
+                <FormControl><Input {...field} className={inputCls} /></FormControl>
+              </FormItem>
+            )}/>
             <div className="md:col-span-4 col-span-12 text-sm text-slate-600">
               <p>Status: <span className="font-semibold">{patient.doc_validation_status || "Pendente"}</span></p>
+              {(patient as any).doc_validation_source && <p className="text-xs text-slate-500">Origem: {(patient as any).doc_validation_source}</p>}
               {patient.doc_validated_by && patient.doc_validated_at && (
                 <p className="text-xs text-slate-500">Validado por {patient.doc_validated_by} em {patient.doc_validated_at}</p>
               )}
             </div>
+              </>
+            )}
+            {isForeignDoc && (
+              <>
+                <FormField control={form.control} name="civil_documents.0.doc_type" render={({ field }) => (
+                  <FormItem className="md:col-span-4 col-span-12">
+                    <FormLabel className={labelCls}>Tipo de Documento</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger className={inputCls}><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="Passaporte">Passaporte</SelectItem>
+                        <SelectItem value="RNE">RNE</SelectItem>
+                        <SelectItem value="CNH">CNH</SelectItem>
+                        <SelectItem value="Outro">Outro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}/>
+                <FormField control={form.control} name="civil_documents.0.doc_number" render={({ field }) => (
+                  <FormItem className="md:col-span-4 col-span-12">
+                    <FormLabel className={labelCls}>Número</FormLabel>
+                    <FormControl><Input {...field} className={inputCls} /></FormControl>
+                  </FormItem>
+                )}/>
+                <FormField control={form.control} name="civil_documents.0.issuer_country" render={({ field }) => (
+                  <FormItem className="md:col-span-4 col-span-12">
+                    <FormLabel className={labelCls}>País Emissor</FormLabel>
+                    <FormControl><Input {...field} className={inputCls} placeholder="Brasil" /></FormControl>
+                  </FormItem>
+                )}/>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -257,6 +445,8 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
                 <TableRow>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Número</TableHead>
+                  <TableHead>Emissor</TableHead>
+                  <TableHead>País Emissor</TableHead>
                   <TableHead>Validade</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
@@ -269,6 +459,12 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
                     </TableCell>
                     <TableCell>
                       <Input {...form.register(`civil_documents.${idx}.doc_number` as const)} className={inputCls} />
+                    </TableCell>
+                    <TableCell>
+                      <Input {...form.register(`civil_documents.${idx}.issuer` as const)} className={inputCls} placeholder="Órgão/País Emissor" />
+                    </TableCell>
+                    <TableCell>
+                      <Input {...form.register(`civil_documents.${idx}.issuer_country` as const)} className={inputCls} placeholder="Brasil" />
                     </TableCell>
                     <TableCell>
                       <Input type="date" {...form.register(`civil_documents.${idx}.valid_until` as const)} className={inputCls} />
@@ -317,7 +513,9 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
                   <SelectContent>
                     <SelectItem value="whatsapp">WhatsApp</SelectItem>
                     <SelectItem value="phone">Telefone</SelectItem>
+                    <SelectItem value="sms">SMS</SelectItem>
                     <SelectItem value="email">E-mail</SelectItem>
+                    <SelectItem value="other">Outro</SelectItem>
                   </SelectContent>
                 </Select>
               </FormItem>
@@ -325,7 +523,16 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
             <FormField control={form.control} name="contact_time_preference" render={({ field }) => (
               <FormItem className="md:col-span-6 col-span-12">
                 <FormLabel className={labelCls}>Melhor Horário</FormLabel>
-                <FormControl><Input {...field} className={inputCls} placeholder="Manhã/Tarde/Noite/Comercial" /></FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl><SelectTrigger className={inputCls}><SelectValue /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="Manha">Manhã</SelectItem>
+                    <SelectItem value="Tarde">Tarde</SelectItem>
+                    <SelectItem value="Noite">Noite</SelectItem>
+                    <SelectItem value="Comercial">Comercial</SelectItem>
+                    <SelectItem value="Qualquer Horario">Qualquer Horário</SelectItem>
+                  </SelectContent>
+                </Select>
               </FormItem>
             )}/>
             <FormField control={form.control} name="contact_notes" render={({ field }) => (
@@ -361,8 +568,84 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
           <CardHeader>
             <CardTitle className="text-base text-[#0F2B45]">LGPD</CardTitle>
           </CardHeader>
-          <CardContent className="text-xs text-slate-600">
-            Consentimento de Marketing: {patient.block_marketing ? "Recusado" : "Aceito"} {patient.marketing_consent_source ? `- Origem: ${patient.marketing_consent_source}` : ""} {patient.marketing_consented_at ? `em ${patient.marketing_consented_at}` : ""}
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <FormField control={form.control} name="photo_consent" render={({ field }) => (
+                <FormItem className="flex items-center space-x-2">
+                  <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                  <FormLabel className="text-xs font-semibold text-slate-600 uppercase">Uso de Imagem</FormLabel>
+                </FormItem>
+              )}/>
+              <FormField control={form.control} name="photo_consent_date" render={({ field }) => (
+                <FormItem className="flex items-center space-x-2">
+                  <FormLabel className={labelCls}>Data Consent. Imagem</FormLabel>
+                  <FormControl><Input type="date" value={field.value ? format(field.value, "yyyy-MM-dd") : ""} onChange={(e)=>field.onChange(e.target.value ? new Date(e.target.value):undefined)} className={inputCls} /></FormControl>
+                </FormItem>
+              )}/>
+            </div>
+
+            {/* Widget de Consentimento */}
+            {!hasConsentDefined || forceConsentEdit ? (
+              <div className="border border-amber-300 bg-amber-50 text-amber-800 rounded p-3 space-y-3">
+                <div className="font-semibold">Atenção: Consentimento de comunicação pendente.</div>
+                <div className="flex gap-3">
+                  <Button type="button" onClick={() => form.setValue("marketing_consent_status", "accepted")} className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1">✅ Aceitar Comunicações</Button>
+                  <Button type="button" onClick={() => form.setValue("marketing_consent_status", "rejected")} variant="destructive" className="flex-1">🚫 Recusar</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 rounded border border-slate-200 bg-slate-50 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Status Atual: {watchConsentStatus === "accepted" ? "ACEITO" : "RECUSADO"}</p>
+                  {consentHistoryText && <p className="text-xs text-slate-600">Histórico: {consentHistoryText}</p>}
+                </div>
+                <Button type="button" variant="outline" onClick={() => setForceConsentEdit(true)}>Alterar/Revogar</Button>
+              </div>
+            )}
+            <div className="text-xs text-slate-600">
+              Consentimento de Marketing: {patient.block_marketing ? "Recusado" : "Aceito"} {patient.marketing_consent_source ? `- Origem: ${patient.marketing_consent_source}` : ""} {patient.marketing_consented_at ? `em ${patient.marketing_consented_at}` : ""}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-fluent border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-base text-[#0F2B45]">Responsável Legal (Resumo)</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-slate-700">
+            {(() => {
+              const guardianView = (patient as any).legal_guardian_summary;
+              const hasGuardian = guardianView?.has_legal_guardian ?? (patient as any).has_legal_guardian;
+              const guardianStatus = guardianView?.legal_guardian_status ?? (patient as any).legal_guardian_status;
+
+              if (hasGuardian) {
+                return (
+                  <div className="flex items-center gap-2">
+                    {guardianStatus === "Cadastro OK" && (
+                      <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200">Responsável Ativo</Badge>
+                    )}
+                    {guardianStatus === "Cadastro Pendente" && (
+                      <Badge className="bg-amber-100 text-amber-700 border border-amber-200">Dados Incompletos</Badge>
+                    )}
+                    {guardianView?.guardian_name && (
+                      <span className="font-semibold">
+                        {guardianView.guardian_name}
+                        {guardianView.guardian_relation ? ` (${guardianView.guardian_relation})` : ""}
+                      </span>
+                    )}
+                    {guardianView?.guardian_phone && (
+                      <span className="text-xs text-slate-600">Tel: {guardianView.guardian_phone}</span>
+                    )}
+                    <a className="text-sm text-blue-700 underline" href={`/patients/${patient.id}?tab=team`}>Gerenciar na aba Rede de Apoio</a>
+                  </div>
+                );
+              }
+              return (
+                <div className="flex items-center gap-2 text-rose-700 bg-rose-50 border border-rose-200 px-3 py-2 rounded">
+                  Nenhum responsável legal cadastrado. <a className="underline" href={`/patients/${patient.id}?tab=team`}>Adicionar na Rede de Apoio</a>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
 

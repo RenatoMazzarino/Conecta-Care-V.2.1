@@ -12,7 +12,35 @@ export async function upsertPersonalAction(data: PatientPersonalDTO) {
     return { success: false, error: "Dados inválidos: " + JSON.stringify(parsed.error.format()) };
   }
 
-  const { patient_id, civil_documents, ...updates } = parsed.data;
+  const { patient_id, civil_documents, marketing_consent_status, marketing_consent_history, ...updates } = parsed.data;
+
+  // Rastreio de consentimento: se flags ou status mudarem, registrar histórico
+  try {
+    const { data: current } = await supabase
+      .from("patients")
+      .select("accept_sms, accept_email, block_marketing, marketing_consented_at, marketing_consent_source, marketing_consent_status, marketing_consent_history")
+      .eq("id", patient_id)
+      .maybeSingle();
+
+    const changedFlags =
+      current &&
+      (current.accept_sms !== updates.accept_sms ||
+        current.accept_email !== updates.accept_email ||
+        current.block_marketing !== updates.block_marketing ||
+        current.marketing_consent_status !== marketing_consent_status);
+
+    if (changedFlags) {
+      const nowIso = new Date().toISOString();
+      updates.marketing_consented_at = nowIso as any;
+      updates.marketing_consent_source = marketing_consent_history ? marketing_consent_history : "Portal Administrativo (Edição Manual)";
+      const statusText = marketing_consent_status === "accepted" ? "Aceito" : marketing_consent_status === "rejected" ? "Recusado" : "Pendente";
+      const entry = `${statusText} em ${new Date().toLocaleDateString()}`;
+      (updates as any).marketing_consent_history = [current?.marketing_consent_history, entry].filter(Boolean).join("; ");
+      (updates as any).marketing_consent_status = marketing_consent_status || current?.marketing_consent_status || "pending";
+    }
+  } catch (e) {
+    console.warn("Não foi possível verificar mudança de consentimento", e);
+  }
 
   // Atualiza dados principais do paciente
   const { error: patientError } = await supabase
@@ -40,6 +68,7 @@ export async function upsertPersonalAction(data: PatientPersonalDTO) {
         doc_type: (doc as any).doc_type || (doc as any).docType,
         doc_number: (doc as any).doc_number || (doc as any).docNumber,
         issuer: (doc as any).issuer,
+        issuer_country: (doc as any).issuer_country || (doc as any).issuerCountry || "Brasil",
         issued_at: (doc as any).issued_at || (doc as any).issuedAt,
         valid_until: (doc as any).valid_until || (doc as any).validUntil,
       }));

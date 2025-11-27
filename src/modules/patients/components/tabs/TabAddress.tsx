@@ -36,42 +36,46 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
     complement: addr.complement || '',
     referencePoint: addr.reference_point || '',
     zoneType: addr.zone_type || 'Urbana',
-    travelNotes: addr.travel_notes || '',
+    travelNotes: addr.travel_notes || dom.travel_notes || '',
+    geoLat: addr.geo_lat || addr.geo_latitude || undefined,
+    geoLng: addr.geo_lng || addr.geo_longitude || undefined,
+    geoLatitude: addr.geo_latitude || undefined,
+    geoLongitude: addr.geo_longitude || undefined,
     propertyType: addr.property_type || undefined,
     condoName: addr.condo_name || '',
     blockTower: addr.block_tower || '',
     floorNumber: addr.floor_number || undefined,
     unitNumber: addr.unit_number || '',
-    ambulanceAccess: dom.ambulance_access || 'Sim - Total',
-    wheelchairAccess: addr.wheelchair_access || 'Livre',
-    elevatorStatus: addr.elevator_status || 'Não tem',
-    streetAccessType: addr.street_access_type || 'Rua Larga',
+    ambulanceAccess: dom.ambulance_access || 'Total',
+    wheelchairAccess: addr.wheelchair_access || 'Nao_avaliado',
+    elevatorStatus: addr.elevator_status || 'Nao_informado',
+    streetAccessType: addr.street_access_type || 'Nao_informado',
     parking: addr.parking || '',
     teamParking: dom.team_parking || '',
     has24hConcierge: addr.has_24h_concierge ?? false,
     conciergeContact: addr.concierge_contact || '',
     entryProcedure: addr.entry_procedure || dom.entry_procedure || '',
-    nightAccessRisk: addr.night_access_risk || dom.night_access_risk || 'Baixo',
-    areaRiskType: addr.area_risk_type || 'Baixo',
+    nightAccessRisk: addr.night_access_risk || dom.night_access_risk || 'Nao_avaliado',
+    areaRiskType: addr.area_risk_type || 'Nao_avaliado',
     worksOrObstacles: addr.works_or_obstacles || '',
     hasWifi: addr.has_wifi ?? dom.has_wifi ?? false,
     hasSmokers: addr.has_smokers ?? dom.has_smokers ?? false,
-    electricInfra: addr.electric_infra || dom.electric_infra || undefined,
-    backupPower: addr.backup_power || undefined,
-    cellSignalQuality: addr.cell_signal_quality || undefined,
+    electricInfra: addr.electric_infra || dom.electric_infra || 'Nao_informada',
+    backupPower: addr.backup_power || 'Nao_informado',
+    cellSignalQuality: addr.cell_signal_quality || 'Nao_informado',
     powerOutletsDesc: addr.power_outlets_desc || '',
-    equipmentSpace: addr.equipment_space || undefined,
-    waterSource: addr.water_source || dom.water_source || '',
+    equipmentSpace: addr.equipment_space || 'Nao_avaliado',
+    waterSource: addr.water_source || dom.water_source || 'Nao_informado',
     adaptedBathroom: addr.adapted_bathroom ?? false,
     stayLocation: addr.stay_location || '',
     pets: addr.pets || dom.pets_description || '',
     notes: addr.notes || dom.general_observations || '',
-    bedType: dom.bed_type || '',
-    mattressType: dom.mattress_type || '',
+    bedType: addr.bed_type || dom.bed_type || 'Nao_informado',
+    mattressType: addr.mattress_type || dom.mattress_type || 'Nao_informado',
+    animalsBehavior: addr.animal_behavior || dom.animals_behavior || 'Nao_informado',
     voltage: dom.voltage || '',
     backupPowerSource: dom.backup_power_source || '',
     petsDescription: dom.pets_description || '',
-    animalsBehavior: dom.animals_behavior || '',
     generalObservations: dom.general_observations || '',
   };
 
@@ -149,31 +153,42 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                     )} />
                   </div>
                   <div className="col-span-4">
-                    <FormField control={form.control} name="zoneType" render={({ field }) => (
-                      <FormItem><FormLabel>Zona</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                        <SelectItem value="Urbana">Urbana</SelectItem>
-                        <SelectItem value="Rural">Rural</SelectItem>
-                        <SelectItem value="Periurbana">Periurbana</SelectItem>
-                        <SelectItem value="Comunidade">Comunidade</SelectItem>
-                        <SelectItem value="Risco">Área de Risco</SelectItem>
-                      </SelectContent></Select><FormMessage /></FormItem>
-                    )} />
-                  </div>
+                  <FormField control={form.control} name="zoneType" render={({ field }) => (
+                    <FormItem><FormLabel>Zona</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                      <SelectItem value="Urbana">Urbana</SelectItem>
+                      <SelectItem value="Rural">Rural</SelectItem>
+                      <SelectItem value="Periurbana">Periurbana</SelectItem>
+                      <SelectItem value="Comunidade">Comunidade</SelectItem>
+                      <SelectItem value="Risco">Área de Risco</SelectItem>
+                      <SelectItem value="Nao_informada">Não informado</SelectItem>
+                    </SelectContent></Select><FormMessage /></FormItem>
+                  )} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="geoLatitude" render={({ field }) => (
+                    <FormItem><FormLabel>Latitude</FormLabel><FormControl><Input type="number" step="any" {...field} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="geoLongitude" render={({ field }) => (
+                    <FormItem><FormLabel>Longitude</FormLabel><FormControl><Input type="number" step="any" {...field} /></FormControl></FormItem>
+                  )} />
+                </div>
                 </div>
 
                 <div className="bg-slate-50 p-4 rounded-md border border-slate-200 space-y-4">
                   <h4 className="text-xs font-semibold uppercase text-slate-500">Detalhes do Imóvel</h4>
                   <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="propertyType" render={({ field }) => (
-                      <FormItem><FormLabel>Tipo</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                  <FormField control={form.control} name="propertyType" render={({ field }) => (
+                    <FormItem><FormLabel>Tipo</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
                         <SelectItem value="Casa">Casa</SelectItem>
                         <SelectItem value="Apartamento">Apartamento</SelectItem>
-                        <SelectItem value="Chácara/Sítio">Chácara/Sítio</SelectItem>
+                        <SelectItem value="Chacara_Sitio">Chácara/Sítio</SelectItem>
                         <SelectItem value="ILPI">ILPI</SelectItem>
                         <SelectItem value="Pensão">Pensão</SelectItem>
+                        <SelectItem value="Comercial">Comercial</SelectItem>
                         <SelectItem value="Outro">Outro</SelectItem>
+                        <SelectItem value="Nao_informado">Não informado</SelectItem>
                       </SelectContent></Select><FormMessage /></FormItem>
-                    )} />
+                  )} />
                     <FormField control={form.control} name="condoName" render={({ field }) => (
                       <FormItem><FormLabel>Condomínio</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
@@ -211,9 +226,11 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                 <div className="grid grid-cols-3 gap-4">
                   <FormField control={form.control} name="ambulanceAccess" render={({ field }) => (
                     <FormItem><FormLabel>Acesso Ambulância</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="Sim - Total">Sim - Total</SelectItem>
-                      <SelectItem value="Sim - Parcial">Sim - Parcial</SelectItem>
-                      <SelectItem value="Não">Não</SelectItem>
+                      <SelectItem value="Total">Total</SelectItem>
+                      <SelectItem value="Parcial">Parcial</SelectItem>
+                      <SelectItem value="Dificil">Difícil</SelectItem>
+                      <SelectItem value="Nao_acessa">Não acessa</SelectItem>
+                      <SelectItem value="Nao_informado">Não informado</SelectItem>
                     </SelectContent></Select></FormItem>
                   )} />
                   <FormField control={form.control} name="wheelchairAccess" render={({ field }) => (
@@ -221,6 +238,7 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                       <SelectItem value="Livre">Livre</SelectItem>
                       <SelectItem value="Com restrição">Com restrição</SelectItem>
                       <SelectItem value="Incompatível">Incompatível</SelectItem>
+                      <SelectItem value="Nao_avaliado">Não avaliado</SelectItem>
                     </SelectContent></Select></FormItem>
                   )} />
                   <FormField control={form.control} name="nightAccessRisk" render={({ field }) => (
@@ -228,6 +246,7 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                       <SelectItem value="Baixo">Baixo</SelectItem>
                       <SelectItem value="Médio">Médio</SelectItem>
                       <SelectItem value="Alto">Alto</SelectItem>
+                      <SelectItem value="Nao_avaliado">Não avaliado</SelectItem>
                     </SelectContent></Select></FormItem>
                   )} />
                 </div>
@@ -241,6 +260,7 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                       <SelectItem value="Não tem">Não tem</SelectItem>
                       <SelectItem value="Tem - Não comporta maca">Tem - Não comporta maca</SelectItem>
                       <SelectItem value="Tem - Comporta maca">Tem - Comporta maca</SelectItem>
+                      <SelectItem value="Nao_informado">Não informado</SelectItem>
                     </SelectContent></Select></FormItem>
                   )} />
                 </div>
@@ -253,6 +273,7 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                       <SelectItem value="Rua sem Saída">Rua sem Saída</SelectItem>
                       <SelectItem value="Viela">Viela</SelectItem>
                       <SelectItem value="Estrada de Terra">Estrada de Terra</SelectItem>
+                      <SelectItem value="Nao_informado">Não informado</SelectItem>
                     </SelectContent></Select></FormItem>
                   )} />
                   <FormField control={form.control} name="teamParking" render={({ field }) => (
@@ -282,6 +303,9 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
 
                 <FormField control={form.control} name="worksOrObstacles" render={({ field }) => (
                   <FormItem><FormLabel>Notas de Viagem (Motorista)</FormLabel><FormControl><Textarea {...field} placeholder="Ex: Entrar pela portaria 2, rua esburacada..." className="h-20" /></FormControl></FormItem>
+                )} />
+                <FormField control={form.control} name="travelNotes" render={({ field }) => (
+                  <FormItem><FormLabel>Observações de acesso</FormLabel><FormControl><Textarea {...field} placeholder="Detalhes adicionais de rota/acesso" className="h-20" /></FormControl></FormItem>
                 )} />
               </CardContent>
             </Card>
@@ -345,6 +369,7 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                       <SelectItem value="220v">220v</SelectItem>
                       <SelectItem value="Bivolt">Bivolt</SelectItem>
                       <SelectItem value="Instável">Instável</SelectItem>
+                      <SelectItem value="Nao_informada">Não informada</SelectItem>
                     </SelectContent></Select></FormItem>
                   )} />
                   <FormField control={form.control} name="cellSignalQuality" render={({ field }) => (
@@ -353,6 +378,7 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                       <SelectItem value="Razoável">Razoável</SelectItem>
                       <SelectItem value="Ruim">Ruim</SelectItem>
                       <SelectItem value="Inexistente">Inexistente</SelectItem>
+                      <SelectItem value="Nao_informado">Não informado</SelectItem>
                     </SelectContent></Select></FormItem>
                   )} />
                 </div>
@@ -364,13 +390,15 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                       <SelectItem value="Gerador">Gerador</SelectItem>
                       <SelectItem value="Nobreak">Nobreak</SelectItem>
                       <SelectItem value="Rede Dupla">Rede Dupla</SelectItem>
+                      <SelectItem value="Nao_informado">Não informado</SelectItem>
                     </SelectContent></Select></FormItem>
                   )} />
                   <FormField control={form.control} name="equipmentSpace" render={({ field }) => (
                     <FormItem><FormLabel>Espaço p/ Equip.</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
                       <SelectItem value="Adequado">Adequado</SelectItem>
                       <SelectItem value="Restrito">Restrito</SelectItem>
-                      <SelectItem value="Crítico">Crítico</SelectItem>
+                      <SelectItem value="Critico">Crítico</SelectItem>
+                      <SelectItem value="Nao_avaliado">Não avaliado</SelectItem>
                     </SelectContent></Select></FormItem>
                   )} />
                 </div>
@@ -380,16 +408,36 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                     <FormItem><FormLabel>Tomadas no leito</FormLabel><FormControl><Input {...field} placeholder="Ex: 2 livres" /></FormControl></FormItem>
                   )} />
                   <FormField control={form.control} name="waterSource" render={({ field }) => (
-                    <FormItem><FormLabel>Fonte de água</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                    <FormItem><FormLabel>Fonte de água</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                      <SelectItem value="Rede_publica">Rede pública</SelectItem>
+                      <SelectItem value="Poco_artesiano">Poço artesiano</SelectItem>
+                      <SelectItem value="Cisterna">Cisterna</SelectItem>
+                      <SelectItem value="Outro">Outro</SelectItem>
+                      <SelectItem value="Nao_informado">Não informado</SelectItem>
+                    </SelectContent></Select></FormItem>
                   )} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="stayLocation" render={({ field }) => (
-                    <FormItem><FormLabel>Tipo de cama/leito</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  <FormField control={form.control} name="bedType" render={({ field }) => (
+                    <FormItem><FormLabel>Tipo de cama/leito</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                      <SelectItem value="Hospitalar">Hospitalar</SelectItem>
+                      <SelectItem value="Articulada">Articulada</SelectItem>
+                      <SelectItem value="Comum">Comum</SelectItem>
+                      <SelectItem value="Colchao_no_chao">Colchão no chão</SelectItem>
+                      <SelectItem value="Outro">Outro</SelectItem>
+                      <SelectItem value="Nao_informado">Não informado</SelectItem>
+                    </SelectContent></Select></FormItem>
                   )} />
                   <FormField control={form.control} name="mattressType" render={({ field }) => (
-                    <FormItem><FormLabel>Colchão</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                    <FormItem><FormLabel>Colchão</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                      <SelectItem value="Pneumatico">Pneumático</SelectItem>
+                      <SelectItem value="Viscoelastico">Viscoelástico</SelectItem>
+                      <SelectItem value="Espuma_comum">Espuma comum</SelectItem>
+                      <SelectItem value="Mola">Mola</SelectItem>
+                      <SelectItem value="Outro">Outro</SelectItem>
+                      <SelectItem value="Nao_informado">Não informado</SelectItem>
+                    </SelectContent></Select></FormItem>
                   )} />
                 </div>
 
@@ -398,7 +446,12 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                     <FormItem><FormLabel>Animais</FormLabel><FormControl><Input {...field} placeholder="Animais de estimação" /></FormControl></FormItem>
                   )} />
                   <FormField control={form.control} name="animalsBehavior" render={({ field }) => (
-                    <FormItem><FormLabel>Comportamento</FormLabel><FormControl><Input {...field} placeholder="Manso, agressivo..." /></FormControl></FormItem>
+                    <FormItem><FormLabel>Comportamento</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
+                      <SelectItem value="Doces">Doces</SelectItem>
+                      <SelectItem value="Bravos">Bravos</SelectItem>
+                      <SelectItem value="Necessitam_contencao">Necessitam contenção</SelectItem>
+                      <SelectItem value="Nao_informado">Não informado</SelectItem>
+                    </SelectContent></Select></FormItem>
                   )} />
                 </div>
 

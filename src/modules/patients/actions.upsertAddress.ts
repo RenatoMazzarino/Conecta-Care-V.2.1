@@ -29,8 +29,10 @@ export async function upsertAddressAction(data: PatientAddressForm) {
     reference_point: input.referencePoint,
     zone_type: input.zoneType,
     travel_notes: input.travelNotes,
-    geo_lat: input.geoLat,
-    geo_lng: input.geoLng,
+    geo_lat: input.geoLat || input.geoLatitude,
+    geo_lng: input.geoLng || input.geoLongitude,
+    geo_latitude: input.geoLatitude,
+    geo_longitude: input.geoLongitude,
     property_type: input.propertyType,
     condo_name: input.condoName,
     block_tower: input.blockTower,
@@ -57,6 +59,9 @@ export async function upsertAddressAction(data: PatientAddressForm) {
     stay_location: input.stayLocation,
     pets: input.pets,
     notes: input.notes,
+    bed_type: input.bedType,
+    mattress_type: input.mattressType,
+    animal_behavior: input.animalsBehavior,
     updated_at: new Date().toISOString(),
   };
 

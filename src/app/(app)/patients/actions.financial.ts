@@ -18,13 +18,13 @@ export async function getFinancialLedger(patientId: string) {
 
   const entries = data || [];
   const open = entries
-    .filter((e) => e.status === "pending" || e.status === "partial" || e.status === "overdue")
+    .filter((e) => e.status === "Aberto" || e.status === "Parcial" || e.status === "Vencido")
     .reduce((sum, e) => sum + Number(e.amount_due || 0) - Number(e.amount_paid || 0), 0);
   const overdue = entries
-    .filter((e) => e.status === "overdue")
+    .filter((e) => e.status === "Vencido")
     .reduce((sum, e) => sum + Number(e.amount_due || 0) - Number(e.amount_paid || 0), 0);
   const nextDue = entries
-    .filter((e) => e.status === "pending" || e.status === "partial")
+    .filter((e) => e.status === "Aberto" || e.status === "Parcial")
     .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())[0]?.due_date ?? null;
 
   return { entries, kpis: { open, overdue, nextDue } };
@@ -37,11 +37,12 @@ export async function addLedgerEntry(entry: {
   due_date: string;
   entry_type?: string;
   payment_method?: string;
+  reference_period?: string | null;
 }) {
   const supabase = await createClient();
   const payload = {
     ...entry,
-    status: "pending",
+    status: "Aberto",
   };
   const { error } = await supabase.from("financial_ledger_entries").insert(payload);
   if (error) return { success: false, error: error.message };
@@ -52,7 +53,7 @@ export async function markLedgerPaid(id: string, amountPaid: number, paidAt: str
   const supabase = await createClient();
   const { error } = await supabase
     .from("financial_ledger_entries")
-    .update({ status: "paid", amount_paid: amountPaid, paid_at: paidAt })
+    .update({ status: "Pago", amount_paid: amountPaid, paid_at: paidAt })
     .eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
