@@ -747,11 +747,19 @@ export function TabTeam({ patient }: { patient: FullPatientDetails }) {
                       <Phone className="w-4 h-4" /> {p.phone_primary || "Sem telefone"}
                       {p.is_whatsapp && <WhatsappLogo className="w-4 h-4 text-emerald-600" />}
                       {p.email && <>· <Envelope className="w-4 h-4" /> {p.email}</>}
-                      {!p.lives_with_patient && p.address_summary && <span className="text-[10px] text-slate-500">End.: {p.address_summary}</span>}
                     </div>
+                    <div className="text-xs text-slate-500">
+                      {p.lives_with_patient ? "🏠 Mora com o paciente" : p.address_summary ? `📍 ${p.address_summary}` : null}
+                    </div>
+                    {p.notes && <div className="text-[11px] text-slate-500">📝 {p.notes}</div>}
                     <div className="flex gap-2 text-[10px]">
                       {p.can_authorize_procedures && <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">⚖️ Legal</Badge>}
                       {p.can_authorize_financial && <Badge className="bg-emerald-100 text-emerald-800 flex items-center gap-1">💰 Financeiro</Badge>}
+                      {(p.receive_updates || p.receive_admin || p.opt_out_marketing) && (
+                        <Badge variant="outline" className="text-[10px]">
+                          LGPD: {(p.receive_updates && "📧") || ""}{p.receive_admin ? "📑" : ""}{p.opt_out_marketing ? "🚫mkt" : ""}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <Button size="icon" variant="ghost" onClick={() => p.id && deleteRelatedPerson(p.id).then(refresh)}>
@@ -795,10 +803,19 @@ export function TabTeam({ patient }: { patient: FullPatientDetails }) {
                       <Phone className="w-4 h-4" /> {p.phone_primary || "Sem telefone"}
                       {p.is_whatsapp && <WhatsappLogo className="w-4 h-4 text-emerald-600" />}
                       {p.email && <>· <Envelope className="w-4 h-4" /> {p.email}</>}
-                      {!p.lives_with_patient && p.address_summary && <span className="text-[10px] text-slate-500">End.: {p.address_summary}</span>}
                     </div>
+                    <div className="text-xs text-slate-500">
+                      {p.lives_with_patient ? "🏠 Mora com o paciente" : p.address_summary ? `📍 ${p.address_summary}` : null}
+                    </div>
+                    {p.notes && <div className="text-[11px] text-slate-500">📝 {p.notes}</div>}
                     <div className="flex gap-2 text-[10px]">
                       {p.can_authorize_financial && <Badge className="bg-emerald-100 text-emerald-800 flex items-center gap-1">💰 Financeiro</Badge>}
+                      {p.is_main_contact && <Badge className="bg-amber-100 text-amber-800 flex items-center gap-1">⭐ Principal</Badge>}
+                      {(p.receive_updates || p.receive_admin || p.opt_out_marketing) && (
+                        <Badge variant="outline" className="text-[10px]">
+                          LGPD: {(p.receive_updates && "📧") || ""}{p.receive_admin ? "📑" : ""}{p.opt_out_marketing ? "🚫mkt" : ""}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <Button size="icon" variant="ghost" onClick={() => p.id && deleteRelatedPerson(p.id).then(refresh)}>
