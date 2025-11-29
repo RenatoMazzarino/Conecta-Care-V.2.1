@@ -5,7 +5,14 @@ import { FullPatientDetails } from "../../patient.data";
 import { createClient } from "@/lib/supabase/client";
 import { upsertDocumentMeta, getDocuments as getDocumentsAction } from "@/app/(app)/patients/actions.documents";
 import { getDocumentUrlAction, deleteDocumentAction } from "../../actions.documents";
-import { PatientDocumentDTO, DocumentCategoryEnum } from "@/data/definitions/documents";
+import {
+  PatientDocumentDTO,
+  DocumentCategoryEnum,
+  DocumentDomainEnum,
+  DocumentOriginEnum,
+  DocumentStatusEnum,
+  StorageProviderEnum,
+} from "@/data/definitions/documents";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -35,11 +42,11 @@ import {
 
 const categories = [
   { id: "all", label: "Todos", icon: FolderSimple },
-  { id: "identity", label: "Identificação", icon: IdentificationBadge },
-  { id: "legal", label: "Jurídico", icon: Gavel },
-  { id: "financial", label: "Financeiro", icon: CurrencyCircleDollar },
-  { id: "clinical", label: "Clínico", icon: Scroll },
-  { id: "consent", label: "Consentimentos", icon: ShieldCheck },
+  { id: "Identificacao", label: "Identificação", icon: IdentificationBadge },
+  { id: "Juridico", label: "Jurídico", icon: Gavel },
+  { id: "Financeiro", label: "Financeiro", icon: CurrencyCircleDollar },
+  { id: "Clinico", label: "Clínico", icon: Scroll },
+  { id: "Consentimento", label: "Consentimentos", icon: ShieldCheck },
   { id: "archived", label: "Arquivados", icon: Trash },
 ];
 
@@ -66,11 +73,13 @@ function UploadSheet({ patientId, onDone }: UploadSheetProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<string>("identity");
+  const [category, setCategory] = useState<string>(DocumentCategoryEnum.enum.Identificacao);
+  const [domain, setDomain] = useState<string>(DocumentDomainEnum.enum.Administrativo);
   const [subcategory, setSubcategory] = useState("");
-  const [origin, setOrigin] = useState("Ficha");
+  const [origin, setOrigin] = useState(DocumentOriginEnum.enum.Ficha_Documentos);
   const [confidential, setConfidential] = useState(false);
   const [clinicalVisible, setClinicalVisible] = useState(true);
+  const [adminVisible, setAdminVisible] = useState(true);
   const [uploading, setUploading] = useState(false);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,15 +104,21 @@ function UploadSheet({ patientId, onDone }: UploadSheetProps) {
         patient_id: patientId,
         title: title || file.name,
         category: category as any,
+        domain: domain as any,
         subcategory,
-        origin,
-        status: "Ativo",
+        origin_module: origin as any,
+        document_status: DocumentStatusEnum.enum.Ativo,
         confidential,
         clinical_visible: clinicalVisible,
+        admin_fin_visible: adminVisible,
+        storage_provider: StorageProviderEnum.enum.Supabase,
+        storage_path: filePath,
+        original_file_name: file.name,
         file_name: file.name,
         file_path: filePath,
         file_size_bytes: file.size,
         mime_type: file.type,
+        uploaded_at: new Date().toISOString(),
       };
       const res = await upsertDocumentMeta(doc);
       if (!res.success) throw new Error(res.error);
@@ -133,17 +148,26 @@ function UploadSheet({ patientId, onDone }: UploadSheetProps) {
             <Input type="file" onChange={handleFile} />
             <p className="text-xs text-slate-500 mt-2">Arraste ou selecione um arquivo</p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>Título</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: RG digitalizado" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Título</Label>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: RG digitalizado" />
+              </div>
+              <div className="space-y-1">
+                <Label>Categoria</Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                  {DocumentCategoryEnum.options.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
-              <Label>Categoria</Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Label>Domínio</Label>
+              <Select value={domain} onValueChange={setDomain}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {DocumentCategoryEnum.options.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  {DocumentDomainEnum.options.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -153,7 +177,12 @@ function UploadSheet({ patientId, onDone }: UploadSheetProps) {
             </div>
             <div className="space-y-1">
               <Label>Origem</Label>
-              <Input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="Ficha, Prontuário..." />
+              <Select value={origin} onValueChange={setOrigin}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {DocumentOriginEnum.options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="space-y-2">
@@ -163,6 +192,9 @@ function UploadSheet({ patientId, onDone }: UploadSheetProps) {
             </div>
             <div className="flex items-center gap-2">
               <Checkbox checked={clinicalVisible} onCheckedChange={(v) => setClinicalVisible(!!v)} /> <span>Visível para Clínico</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox checked={adminVisible} onCheckedChange={(v) => setAdminVisible(!!v)} /> <span>Visível para Administrativo/Financeiro</span>
             </div>
           </div>
         </div>
@@ -183,17 +215,24 @@ export function TabDocuments({ patient }: { patient: FullPatientDetails }) {
   const [search, setSearch] = useState("");
   const [originFilter, setOriginFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [domainFilter, setDomainFilter] = useState<string>("all");
 
   const filtered = useMemo(() => {
     return docs.filter((d) => {
-      if (filter === "archived" && d.status !== "Arquivado") return false;
-      if (filter !== "all" && filter !== "archived" && d.category !== filter) return false;
+      const docStatus = d.document_status || d.status;
+      const docCategory = d.category;
+      const docOrigin = d.origin_module || d.origin;
+      const docDomain = d.domain;
+
+      if (filter === "archived" && docStatus !== "Arquivado") return false;
+      if (filter !== "all" && filter !== "archived" && docCategory !== filter) return false;
       if (search && !(`${d.title} ${d.subcategory || ""}`.toLowerCase().includes(search.toLowerCase()))) return false;
-      if (originFilter !== "all" && d.origin !== originFilter) return false;
-      if (statusFilter !== "all" && d.status !== statusFilter) return false;
+      if (originFilter !== "all" && docOrigin !== originFilter) return false;
+      if (statusFilter !== "all" && docStatus !== statusFilter) return false;
+      if (domainFilter !== "all" && docDomain !== domainFilter) return false;
       return true;
     });
-  }, [docs, filter, search, originFilter, statusFilter]);
+  }, [docs, filter, search, originFilter, statusFilter, domainFilter]);
 
   const refresh = async () => {
     // simple reload
@@ -255,16 +294,21 @@ export function TabDocuments({ patient }: { patient: FullPatientDetails }) {
               <SelectTrigger className="w-40"><SelectValue placeholder="Origem" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas origens</SelectItem>
-                <SelectItem value="Ficha">Ficha</SelectItem>
-                <SelectItem value="Prontuário">Prontuário</SelectItem>
+                {DocumentOriginEnum.options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={domainFilter} onValueChange={(v) => setDomainFilter(v)}>
+              <SelectTrigger className="w-36"><SelectValue placeholder="Domínio" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {DocumentDomainEnum.options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v)}>
               <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="Ativo">Ativo</SelectItem>
-                <SelectItem value="Arquivado">Arquivado</SelectItem>
+                {DocumentStatusEnum.options.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -277,13 +321,13 @@ export function TabDocuments({ patient }: { patient: FullPatientDetails }) {
               <TableRow>
                 <TableHead className="w-10"></TableHead>
                 <TableHead>Título</TableHead>
-                <TableHead>Origem</TableHead>
-                <TableHead>Upload</TableHead>
-                <TableHead>Tamanho</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
+                    <TableHead>Origem</TableHead>
+                    <TableHead>Upload</TableHead>
+                    <TableHead>Tamanho</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="text-center text-slate-500 py-6">Nenhum documento encontrado.</TableCell></TableRow>
@@ -297,11 +341,13 @@ export function TabDocuments({ patient }: { patient: FullPatientDetails }) {
                         {doc.subcategory && <span className="text-xs text-slate-500">{doc.subcategory}</span>}
                       </div>
                     </TableCell>
-                    <TableCell><Badge variant="outline" className="text-[10px]">{doc.origin || "Ficha"}</Badge></TableCell>
-                    <TableCell className="text-sm text-slate-600">{doc.created_at ? format(new Date(doc.created_at), "dd/MM/yyyy") : "—"}</TableCell>
+                    <TableCell><Badge variant="outline" className="text-[10px]">{doc.origin_module || doc.origin || "Ficha"}</Badge></TableCell>
+                    <TableCell className="text-sm text-slate-600">{doc.created_at ? format(new Date(doc.created_at), "dd/MM/yyyy") : doc.uploaded_at ? format(new Date(doc.uploaded_at), "dd/MM/yyyy") : "—"}</TableCell>
                     <TableCell className="text-sm text-slate-600">{formatSize(doc.file_size_bytes)}</TableCell>
                     <TableCell>
-                      <Badge className={doc.status === "Arquivado" ? "bg-slate-200 text-slate-700" : "bg-emerald-100 text-emerald-700"}>{doc.status || "Ativo"}</Badge>
+                      <Badge className={(doc.document_status || doc.status) === "Arquivado" ? "bg-slate-200 text-slate-700" : "bg-emerald-100 text-emerald-700"}>
+                        {doc.document_status || doc.status || "Ativo"}
+                      </Badge>
                     </TableCell>
                     <TableCell className="flex items-center gap-2">
                       <Button variant="ghost" size="icon" onClick={() => handleDownload(doc.file_path)}>

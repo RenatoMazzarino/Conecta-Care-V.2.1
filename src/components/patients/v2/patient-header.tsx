@@ -1,14 +1,16 @@
 'use client';
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { PatientHeaderData } from "@/app/(app)/patients/[patientId]/actions.getHeader";
 import type { FullPatientDetails } from "@/modules/patients/patient.data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MapPin, WarningCircle, FloppyDisk, Printer, ShareNetwork, Prohibit, DotsThree } from "@phosphor-icons/react";
+import { MapPin, WarningCircle, FloppyDisk, Printer, ShareNetwork, Prohibit, DotsThree, FolderSimple } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { TabDocuments } from "@/modules/patients/components/tabs/TabDocuments";
 
 type Props = {
   patientId: string;
@@ -69,6 +71,7 @@ function deriveFromPatient(patient?: FullPatientDetails | null): PatientHeaderDa
 export function PatientHeader({ patientId, headerData, fallbackPatient, onTabChange, breadcrumbs }: Props) {
   const data = headerData || deriveFromPatient(fallbackPatient);
   const loading = !data;
+  const [openGed, setOpenGed] = useState(false);
 
   const initials = useMemo(() => {
     const name = data?.identity.name || "";
@@ -113,6 +116,23 @@ export function PatientHeader({ patientId, headerData, fallbackPatient, onTabCha
             <Button variant="ghost" size="sm" className="gap-2 text-rose-700 hover:bg-rose-50">
               <Prohibit size={16} /> Inativar
             </Button>
+            {fallbackPatient && (
+              <Sheet open={openGed} onOpenChange={setOpenGed}>
+                <SheetTrigger asChild>
+                  <Button variant="secondary" size="sm" className="gap-2">
+                    <FolderSimple size={16} /> Documentos (GED)
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="w-full sm:max-w-5xl overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle>GED do Paciente</SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-4">
+                    <TabDocuments patient={fallbackPatient} />
+                  </div>
+                </SheetContent>
+              </Sheet>
+            )}
             <Button variant="ghost" size="sm" className="gap-1">
               <DotsThree size={18} /> Mais
             </Button>

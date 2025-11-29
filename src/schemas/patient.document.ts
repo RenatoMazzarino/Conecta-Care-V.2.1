@@ -1,43 +1,18 @@
 import { z } from "zod";
+import {
+  DocumentCategoryEnum,
+  DocumentDomainEnum,
+  DocumentOriginEnum,
+  DocumentStatusEnum,
+  StorageProviderEnum,
+  SignatureTypeEnum,
+} from "@/data/definitions/documents";
 
-export const DocumentCategoryEnum = z.enum([
-  "Identificacao",
-  "Juridico",
-  "Financeiro",
-  "Clinico",
-  "Consentimento",
-  "Outros",
-]);
-
-export const DocumentDomainEnum = z.enum(["Administrativo", "Clinico", "Misto"]);
-
-export const DocumentOriginEnum = z.enum([
-  "Ficha_Documentos",
-  "Ficha_Administrativo",
-  "Ficha_Financeiro",
-  "Prontuario",
-  "PortalPaciente",
-  "Importacao",
-  "Outro",
-]);
-
-export const DocumentStatusEnum = z.enum([
-  "Ativo",
-  "Substituido",
-  "Arquivado",
-  "Rascunho",
-  "ExcluidoLogicamente",
-]);
-
-export const StorageProviderEnum = z.enum(["Local", "S3", "GCS", "Supabase", "Outro"]);
-export const SignatureTypeEnum = z.enum(["Nenhuma", "EletronicaSimples", "EletronicaAvancada", "ICPBrasil", "CarimboTempo"]);
-
-// Schema para salvar os METADADOS após o upload do arquivo (GED)
-export const PatientDocumentSchema = z.object({
+export const PatientDocumentZ = z.object({
   id: z.string().uuid().optional(),
   patient_id: z.string().uuid(),
 
-  // Identificação básica
+  // Identificação
   title: z.string().min(2, "Título obrigatório"),
   description: z.string().optional(),
   external_ref: z.string().optional(),
@@ -61,7 +36,7 @@ export const PatientDocumentSchema = z.object({
   storage_provider: StorageProviderEnum.default("Supabase"),
   storage_path: z.string(),
   original_file_name: z.string(),
-  file_path: z.string(), // mantido por compatibilidade
+  file_path: z.string(), // compatibilidade
   file_size_bytes: z.number(),
   mime_type: z.string(),
   file_hash: z.string().optional(),
@@ -70,7 +45,7 @@ export const PatientDocumentSchema = z.object({
   version: z.number().default(1),
   previous_document_id: z.string().uuid().optional().nullable(),
 
-  // Vínculos cruzados (opcionais)
+  // Vínculos
   admin_contract_id: z.string().optional().nullable(),
   finance_entry_id: z.string().uuid().optional().nullable(),
   clinical_visit_id: z.string().uuid().optional().nullable(),
@@ -84,7 +59,7 @@ export const PatientDocumentSchema = z.object({
   signature_summary: z.string().optional(),
   external_signature_id: z.string().optional(),
 
-  // Metadados livres
+  // Metadados
   tags: z.array(z.string()).optional(),
   public_notes: z.string().optional(),
   internal_notes: z.string().optional(),
@@ -99,4 +74,4 @@ export const PatientDocumentSchema = z.object({
   created_at: z.coerce.date().optional(),
 });
 
-export type PatientDocumentDTO = z.infer<typeof PatientDocumentSchema>;
+export type PatientDocumentInput = z.infer<typeof PatientDocumentZ>;

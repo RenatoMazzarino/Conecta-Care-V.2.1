@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from "@/lib/supabase/server";
-import { PatientDocumentSchema, PatientDocumentDTO } from "@/data/definitions/documents";
+import { PatientDocumentSchema, PatientDocumentDTO, DocumentStatusEnum } from "@/data/definitions/documents";
 import { revalidatePath } from "next/cache";
 
 // Salva os metadados do documento no banco
@@ -18,8 +18,12 @@ export async function createDocumentRecordAction(data: PatientDocumentDTO) {
       ...form,
       confidential: form.confidential ?? false,
       clinical_visible: form.clinical_visible ?? true,
-      status: form.status || 'Ativo',
-      origin: form.origin || 'Ficha',
+      admin_fin_visible: form.admin_fin_visible ?? true,
+      document_status: form.document_status || DocumentStatusEnum.enum.Ativo,
+      status: (form as any).status || form.document_status || 'Ativo', // compatibilidade legada
+      origin: (form as any).origin || form.origin_module || 'Ficha',
+      storage_path: form.storage_path || form.file_path,
+      uploaded_at: form.uploaded_at || new Date(),
     });
 
   if (error) {

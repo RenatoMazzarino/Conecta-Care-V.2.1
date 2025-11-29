@@ -758,7 +758,7 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
   // Busca separada admin_info para evitar necessidade de relacionamento configurado no cache
   const { data: adminInfoRows } = await supabase
     .from("patient_admin_info")
-    .select("*")
+    .select(`*`)
     .eq("patient_id", patientId)
     .limit(1);
 
@@ -771,6 +771,11 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
 
   // Monta resumo clínico a partir das tabelas normalizadas
   const clinicalSummary = (clinicalSummaryRes?.data as any[] | null)?.[0] || {};
+  let referenceProfessionalName: string | null = null;
+  if (clinicalSummary?.reference_professional_id) {
+    const { data: refProf } = await supabase.from("professional_profiles").select("full_name").eq("id", clinicalSummary.reference_professional_id).single();
+    referenceProfessionalName = refProf?.full_name || null;
+  }
   const devices = (clinicalDevicesRes?.data as any[] || []).map((d: any) => d.device_type).filter(Boolean);
   const allergies = (clinicalAllergiesRes?.data as any[] || []).map((a: any) => a.name).filter(Boolean);
   const risks = (clinicalRisksRes?.data as any[] || []);
@@ -801,9 +806,13 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
     clinical: [{
       patient_id: patientRow.id,
       cid_main: clinicalSummary.cid_main,
+      diagnosis_main: clinicalSummary.diagnosis_main,
+      primary_diagnosis_description: clinicalSummary.primary_diagnosis_description || clinicalSummary.diagnosis_description || null,
       complexity_level: clinicalSummary.complexity_level,
       blood_type: clinicalSummary.blood_type,
       clinical_summary: clinicalSummary.clinical_summary,
+      last_clinical_update_at: clinicalSummary.last_clinical_update_at,
+      reference_professional_name: referenceProfessionalName,
       risk_braden: risks.find((r: any) => r.risk_type === "braden")?.score,
       risk_morse: risks.find((r: any) => r.risk_type === "morse")?.score,
       oxygen_usage: oxygen.in_use,

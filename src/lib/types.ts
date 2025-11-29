@@ -181,3 +181,57 @@ export type CareTeamMember = {
     avatar_url?: string | null;
   } | null;
 };
+
+export type PatientDocument = {
+  id: string;
+  patient_id: string;
+  title: string;
+  description?: string | null;
+  external_ref?: string | null;
+
+  domain?: "Administrativo" | "Clinico" | "Misto";
+  category: "Identificacao" | "Juridico" | "Financeiro" | "Clinico" | "Consentimento" | "Outros";
+  subcategory?: string | null;
+  origin_module?: string | null;
+
+  document_status?: "Ativo" | "Substituido" | "Arquivado" | "Rascunho" | "ExcluidoLogicamente";
+  confidential?: boolean;
+  clinical_visible?: boolean;
+  admin_fin_visible?: boolean;
+  min_access_role?: string | null;
+
+  storage_provider?: "Local" | "S3" | "GCS" | "Supabase" | "Outro";
+  storage_path?: string | null;
+  original_file_name?: string | null;
+  file_path: string;
+  file_size_bytes: number;
+  mime_type: string;
+  file_hash?: string | null;
+
+  version?: number;
+  previous_document_id?: string | null;
+
+  admin_contract_id?: string | null;
+  finance_entry_id?: string | null;
+  clinical_visit_id?: string | null;
+  clinical_evolution_id?: string | null;
+  prescription_id?: string | null;
+  related_object_id?: string | null;
+
+  signature_type?: "Nenhuma" | "EletronicaSimples" | "EletronicaAvancada" | "ICPBrasil" | "CarimboTempo";
+  signature_date?: string | null;
+  signature_summary?: string | null;
+  external_signature_id?: string | null;
+
+  tags?: string[] | null;
+  public_notes?: string | null;
+  internal_notes?: string | null;
+
+  uploaded_at?: string | null;
+  uploaded_by?: string | null;
+  updated_at?: string | null;
+  updated_by?: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+  created_at?: string | null;
+};
