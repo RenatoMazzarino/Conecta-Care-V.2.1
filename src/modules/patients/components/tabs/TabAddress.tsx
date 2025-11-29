@@ -91,6 +91,7 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
       if (res?.success === false) throw new Error(res.error);
       toast("Endereço salvo", { description: "Dados de logística atualizados com sucesso." });
     } catch (error) {
+      console.error(error);
       toast("Erro ao salvar", { description: "Tente novamente.", action: { label: "Fechar", onClick: () => {} } });
     } finally {
       setIsSaving(false);

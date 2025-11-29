@@ -12,7 +12,6 @@ import { TabInventory } from "./tabs/TabInventory";
 import { TabAdministrative } from "./tabs/TabAdministrative";
 import { TabFinancial } from "./tabs/TabFinancial";
 import { TabDocuments } from "./tabs/TabDocuments";
-import { TabHistory } from "./tabs/TabHistory";
 import { TabHistoryAudit } from "@/components/patients/v2/tab-history-audit";
 import { BusinessProcessFlow, BPF_STEPS } from "@/components/patients/v2/business-process-flow";
 import * as React from "react";

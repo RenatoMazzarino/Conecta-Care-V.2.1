@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { addDays } from "date-fns";
 import { PatientFinancialProfileDTO, FinancialRecordDTO } from "@/data/definitions/financial";
 import { PatientClinicalDTO } from "@/data/definitions/clinical";
-import { EmergencyContactDTO, CareTeamMemberDTO } from "@/data/definitions/team";
+import { EmergencyContactDTO } from "@/data/definitions/team";
 import { PatientAdministrativeDTO } from "@/data/definitions/administrative";
 import { PatientInventoryDTO } from "@/data/definitions/inventory";
 import { PatientDocumentDTO } from "@/data/definitions/documents";
@@ -578,7 +578,6 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
     domicileRes,
     householdRes,
     financialRes,
-    clinicalProfileRes,
     administrativeRes,
     scheduleSettingsRes,
     documentsRes,
@@ -601,7 +600,6 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
     supabase.from("patient_domiciles").select("*").eq("patient_id", patientId),
     supabase.from("patient_household_members").select("*").eq("patient_id", patientId),
     supabase.from("patient_financial_profiles").select("*").eq("patient_id", patientId),
-    supabase.from("patient_clinical_profiles").select("*").eq("patient_id", patientId),
     supabase.from("patient_administrative_profiles").select("*").eq("patient_id", patientId),
     supabase.from("patient_schedule_settings").select("*").eq("patient_id", patientId),
     supabase.from("patient_documents").select("*").eq("patient_id", patientId),

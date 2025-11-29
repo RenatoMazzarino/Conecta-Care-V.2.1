@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Heartbeat, Stethoscope, Gauge, Wind, Plus, ClipboardText, Warning } from "@phosphor-icons/react";
+import { Heartbeat, Gauge, Wind, Plus, ClipboardText } from "@phosphor-icons/react";
 
 const deviceOptions = ["GTT", "TQT", "SVD", "CVC", "PICC", "Marcapasso"];
 

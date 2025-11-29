@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Heartbeat, MapPin, Users, Calendar, WarningCircle, Stethoscope } from "@phosphor-icons/react";
+import { Heartbeat, MapPin, Users, Calendar, WarningCircle } from "@phosphor-icons/react";
 
 type OverviewData = Awaited<ReturnType<typeof getPatientOverview>>;
 

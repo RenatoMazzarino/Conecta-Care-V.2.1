@@ -1,9 +1,7 @@
 import { getPatientsPaginated } from "@/modules/patients/patient.data";
 import { PatientDataGrid } from "@/modules/patients/components/PatientDataGrid";
 import { PatientStatsFilters } from "@/modules/patients/components/PatientStatsFilters";
-import { Button } from "@/components/ui/button";
-import { UserPlus, MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
-import Link from "next/link";
+import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 import { createClient } from "@/lib/supabase/server";
 import { QuickCreatePatient } from "@/components/patients/quick-create-patient";
 

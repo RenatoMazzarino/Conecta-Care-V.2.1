@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MapPin, WarningCircle, FloppyDisk, Printer, ShareNetwork, Prohibit, DotsThree, FolderSimple } from "@phosphor-icons/react";
+import { WarningCircle, FloppyDisk, Printer, ShareNetwork, Prohibit, DotsThree, FolderSimple } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { TabDocuments } from "@/modules/patients/components/tabs/TabDocuments";
@@ -68,7 +68,7 @@ function deriveFromPatient(patient?: FullPatientDetails | null): PatientHeaderDa
   };
 }
 
-export function PatientHeader({ patientId, headerData, fallbackPatient, onTabChange, breadcrumbs }: Props) {
+export function PatientHeader({ headerData, fallbackPatient, onTabChange }: Props) {
   const data = headerData || deriveFromPatient(fallbackPatient);
   const loading = !data;
   const [openGed, setOpenGed] = useState(false);
@@ -123,11 +123,11 @@ export function PatientHeader({ patientId, headerData, fallbackPatient, onTabCha
                     <FolderSimple size={16} /> Documentos (GED)
                   </Button>
                 </SheetTrigger>
-                <SheetContent className="w-full sm:max-w-5xl overflow-y-auto">
+                <SheetContent className="w-full sm:max-w-5xl overflow-y-auto px-0">
                   <SheetHeader>
                     <SheetTitle>GED do Paciente</SheetTitle>
                   </SheetHeader>
-                  <div className="mt-4">
+                  <div className="mt-4 px-4 pb-6">
                     <TabDocuments patient={fallbackPatient} />
                   </div>
                 </SheetContent>

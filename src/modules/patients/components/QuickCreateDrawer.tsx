@@ -12,7 +12,7 @@ import { quickCreatePatientAction } from "@/app/(app)/patients/actions.quick-cre
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
-import { UploadSimple, XCircle, Clipboard } from "@phosphor-icons/react";
+import { UploadSimple, XCircle } from "@phosphor-icons/react";
 
 const QuickSchema = z.object({
   full_name: z.string().min(2, "Obrigatório"),

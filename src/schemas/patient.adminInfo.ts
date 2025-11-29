@@ -8,7 +8,7 @@ export const PatientAdminInfoZ = z.object({
   status: z.string().optional(),
   status_reason: z.string().optional(),
   status_changed_at: z.string().datetime().optional(),
-  admissionType: z.enum(["Internacao_Domiciliar", "Cuidados_Paliativos", "Assistencia_Ventilatoria", "Reabilitacao", "Procedimento_Pontual", "Outro"], { required_error: "Tipo de admissão obrigatório" }),
+  admissionType: z.enum(["Internacao_Domiciliar", "Cuidados_Paliativos", "Assistencia_Ventilatoria", "Reabilitacao", "Procedimento_Pontual", "Outro"]),
   demandOrigin: z.enum(["Particular", "OperadoraSaude", "SUS", "Empresa", "Judicial", "Outro"]).optional(),
   demandOriginDescription: z.string().optional(),
   primaryPayerType: z.enum(["Operadora", "PessoaFisica", "Empresa", "OrgaoPublico", "Outro"]),

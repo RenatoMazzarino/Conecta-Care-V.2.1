@@ -33,7 +33,6 @@ export function NewShiftDialog() {
 
   useEffect(() => {
     if (open && patients.length === 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoadingOptions(true);
       getSchedulingOptions().then(data => {
         setPatients(data.patients);

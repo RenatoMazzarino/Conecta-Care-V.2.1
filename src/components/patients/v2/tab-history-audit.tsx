@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import type { Patient, SystemAuditLog } from '@/lib/types';
 import { getPatientAuditLogs } from '@/app/(app)/patients/[patientId]/actions.getAuditLogs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -56,6 +56,7 @@ export function TabHistoryAudit({ patient }: TabHistoryAuditProps) {
   const toast = useToast();
   const [logs, setLogs] = useState<SystemAuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  void patient;
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -66,6 +67,7 @@ export function TabHistoryAudit({ patient }: TabHistoryAuditProps) {
         const data = await getPatientAuditLogs(patientId);
         setLogs(data);
       } catch (error) {
+        console.error(error);
         toast.error("Erro ao carregar auditoria");
       } finally {
         setIsLoading(false);

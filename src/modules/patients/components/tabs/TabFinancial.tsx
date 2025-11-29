@@ -6,10 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   PatientFinancialProfileSchema,
   PatientFinancialProfileDTO,
-  BondEnum,
   BillingModelEnum,
   PaymentMethodEnum,
-  InvoiceDeliveryEnum,
   LedgerEntryDTO,
 } from "@/data/definitions/financial";
 import { upsertFinancialAction } from "../../actions.upsertFinancial";
@@ -25,7 +23,7 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Lock, Wallet, Calculator, UserCircle, TrendUp, Plus, LinkSimple, Phone, IdentificationCard } from "@phosphor-icons/react";
+import { Lock, Calculator, UserCircle, TrendUp, Plus, LinkSimple, Phone, IdentificationCard } from "@phosphor-icons/react";
 import { addLedgerEntry, markLedgerPaid } from "@/app/(app)/patients/actions.financial";
 
 const formatCurrency = (v?: number | null) => (v !== undefined && v !== null ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "R$ 0,00");
@@ -120,7 +118,7 @@ function AddEntrySheet({ patientId, onDone }: { patientId: string; onDone: () =>
 export function TabFinancial({ patient }: { patient: FullPatientDetails }) {
   const adminInfo = (patient as any).admin_info?.[0] || {};
   const financial = (patient as any).financial?.[0] || {};
-  const ledger = (patient.ledger as LedgerEntryDTO[]) || [];
+  const ledger = (patient.ledger as unknown as LedgerEntryDTO[]) || [];
   const relatedPersons = (patient.related_persons as any[]) || [];
   const [selectedResponsible, setSelectedResponsible] = useState<any | null>(null);
 

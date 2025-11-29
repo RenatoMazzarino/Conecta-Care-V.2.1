@@ -64,11 +64,18 @@ export const PatientDocumentSchema = z.object({
   file_path: z.string(), // mantido por compatibilidade
   file_size_bytes: z.number(),
   mime_type: z.string(),
+  extension: z.string().min(1),
   file_hash: z.string().optional(),
 
   // Versionamento
   version: z.number().default(1),
   previous_document_id: z.string().uuid().optional().nullable(),
+
+  // Ciclo de vida
+  expires_at: z.coerce.date().optional().nullable(),
+  is_verified: z.boolean().default(false),
+  verified_at: z.coerce.date().optional().nullable(),
+  verified_by: z.string().uuid().optional().nullable(),
 
   // Vínculos cruzados (opcionais)
   admin_contract_id: z.string().optional().nullable(),

@@ -7,7 +7,12 @@ import { revalidatePath } from "next/cache";
 // Salva os metadados do documento no banco
 export async function createDocumentRecordAction(data: PatientDocumentDTO) {
   const supabase = await createClient();
-  const parsed = PatientDocumentSchema.safeParse(data);
+  const normalized: Record<string, any> = { ...data };
+  if (!normalized.extension && typeof normalized.original_file_name === "string") {
+    const ext = normalized.original_file_name.split(".").pop();
+    normalized.extension = (ext || "bin").toLowerCase();
+  }
+  const parsed = PatientDocumentSchema.safeParse(normalized);
 
   if (!parsed.success) return { success: false, error: "Dados inválidos." };
   const form = parsed.data;

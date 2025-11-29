@@ -48,7 +48,6 @@ export function InventoryMasterDialog({ item, trigger }: Props) {
     }
   });
 
-  // eslint-disable-next-line react-hooks/incompatible-library
   const category = watch('category');
 
   async function onSubmit(data: InventoryFormData) {

@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 export async function upsertAdministrativeAction(data: PatientAdminInfoForm) {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
-  const currentUserId = userData?.user?.id || null;
+  const currentUserId = userData?.user?.id || undefined;
   const parsed = PatientAdminInfoZ.safeParse(data);
 
   if (!parsed.success) {
@@ -54,9 +54,6 @@ export async function upsertAdministrativeAction(data: PatientAdminInfoForm) {
     primary_payer_description: form.primaryPayerDescription,
     primary_payer_related_person_id: form.primaryPayerRelatedPersonId,
     primary_payer_legal_entity_id: form.primaryPayerLegalEntityId,
-    primary_payer_type: form.primaryPayerType,
-    cost_center_id: form.costCenterId,
-    erp_case_code: form.erpCaseCode,
     frequency: form.frequency,
     scale_model: form.scaleModel,
     scale_mode: form.scaleMode,

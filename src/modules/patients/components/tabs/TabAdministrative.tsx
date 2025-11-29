@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -108,7 +108,6 @@ export function TabAdministrative({ patient }: { patient: FullPatientDetails }) 
       admissionType: admin.admission_type || undefined,
       demandOrigin: admin.demand_origin || undefined,
       demandOriginDescription: admin.demand_origin_description || "",
-      primaryPayerType: admin.primary_payer_type || "",
       startDate: dateStr(admin.start_date),
       endDate: dateStr(admin.end_date),
       effectiveDischargeDate: dateStr(admin.effective_discharge_date),
@@ -204,7 +203,8 @@ export function TabAdministrative({ patient }: { patient: FullPatientDetails }) 
   const payerNameDisplay = useMemo(() => {
     if (form.watch("primaryPayerType") === "PessoaFisica") {
       const person = relatedPersons.find((r: any) => r.id === payerRelatedId);
-      return person ? `${person.full_name || person.name} (PF)` : "Selecione uma pessoa...";
+      const displayName = person?.full_name || (person as { name?: string } | undefined)?.name;
+      return displayName ? `${displayName} (PF)` : "Selecione uma pessoa...";
     }
     const desc = form.watch("primaryPayerDescription");
     const type = form.watch("primaryPayerType");
@@ -291,7 +291,6 @@ export function TabAdministrative({ patient }: { patient: FullPatientDetails }) 
                         ))}
                       </SelectContent>
                     </Select>
-                    {payerName && <p className="text-xs text-slate-500 mt-1">Nome: {payerName}</p>}
                   </FormItem>
                 )} />
               ) : (
@@ -642,7 +641,6 @@ export function TabAdministrative({ patient }: { patient: FullPatientDetails }) 
                   <FormField control={form.control} name="chkOtherDocsDesc" render={({ field }) => (
                     <FormItem><FormLabel>Descrição Outros Docs</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>
                   )} />
-                  <DocLink name="chkOtherDocsDocId" docs={documents} label="Documento (Outros)" form={form} />
                 </div>
               </div>
               <FormField control={form.control} name="checklistNotes" render={({ field }) => (

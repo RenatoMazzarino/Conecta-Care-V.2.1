@@ -203,10 +203,15 @@ export type PatientDocument = {
   storage_provider?: "Local" | "S3" | "GCS" | "Supabase" | "Outro";
   storage_path?: string | null;
   original_file_name?: string | null;
+  extension?: string | null;
   file_path: string;
   file_size_bytes: number;
   mime_type: string;
   file_hash?: string | null;
+  expires_at?: string | null;
+  is_verified?: boolean | null;
+  verified_at?: string | null;
+  verified_by?: string | null;
 
   version?: number;
   previous_document_id?: string | null;

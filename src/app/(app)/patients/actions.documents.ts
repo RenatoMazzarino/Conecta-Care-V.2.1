@@ -24,7 +24,16 @@ export async function getDocuments(patientId: string, opts?: GetDocsOpts) {
 }
 
 export async function upsertDocumentMeta(doc: unknown) {
-  const parsed = PatientDocumentSchema.safeParse(doc);
+  let normalized = doc;
+  if (doc && typeof doc === "object") {
+    normalized = { ...(doc as Record<string, any>) };
+    if (!normalized.extension && typeof normalized.original_file_name === "string") {
+      const ext = normalized.original_file_name.split(".").pop();
+      normalized.extension = (ext || "bin").toLowerCase();
+    }
+  }
+
+  const parsed = PatientDocumentSchema.safeParse(normalized);
   if (!parsed.success) {
     console.error(parsed.error.flatten());
     return { success: false, error: "Dados inválidos" };
