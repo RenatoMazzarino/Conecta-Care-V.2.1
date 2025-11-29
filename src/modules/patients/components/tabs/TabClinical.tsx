@@ -1,249 +1,298 @@
 'use client';
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { PatientClinicalSchema, PatientClinicalDTO } from "@/data/definitions/clinical";
-import { upsertClinicalDataAction } from "@/app/(app)/patients/actions.upsertClinicalData";
+import useSWR from "swr";
+import { format } from "date-fns";
+import { Heartbeat, Gauge, Wind, ClipboardText, Pill, WarningCircle } from "@phosphor-icons/react";
 import { FullPatientDetails } from "../../patient.data";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { toast } from "sonner";
-import { Heartbeat, Gauge, Wind, Plus, ClipboardText } from "@phosphor-icons/react";
+import { ClinicalDashboard } from "@/modules/patients/clinical-dashboard.data";
 import { GedTriggerButton } from "@/components/ged/GedTriggerButton";
-import { DocumentCategoryEnum, DocumentDomainEnum, DocumentOriginEnum } from "@/data/definitions/documents";
+import { DocumentDomainEnum } from "@/data/definitions/documents";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 
-const deviceOptions = ["GTT", "TQT", "SVD", "CVC", "PICC", "Marcapasso"];
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-const complexityBadge = (level?: string) => {
-  const map: any = {
+const complexityBadge = (level?: string | null) => {
+  const map: Record<string, string> = {
     low: "bg-emerald-100 text-emerald-700",
     medium: "bg-amber-100 text-amber-800",
     high: "bg-orange-100 text-orange-800",
     critical: "bg-rose-100 text-rose-800",
   };
-  return map[level || "low"] || "bg-slate-100 text-slate-700";
+  return map[level || "medium"] || "bg-slate-100 text-slate-700";
+};
+
+const formatDate = (date?: string | null, fallback = "—") => {
+  if (!date) return fallback;
+  const jsDate = new Date(date);
+  if (Number.isNaN(jsDate.getTime())) return fallback;
+  return format(jsDate, "dd/MM/yyyy HH:mm");
+};
+
+const RiskCard = ({ name, score, maxScore, riskLevel, assessedAt }: ClinicalDashboard["riskScores"][number]) => {
+  const percent = maxScore ? Math.min(100, Math.max(0, ((score ?? 0) / maxScore) * 100)) : undefined;
+  return (
+    <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+      <div className="flex items-center justify-between text-xs text-slate-500">
+        <span>{name}</span>
+        {assessedAt && <span>{formatDate(assessedAt)}</span>}
+      </div>
+      <p className="text-lg font-semibold text-slate-900">{score ?? "—"}</p>
+      {riskLevel && <p className="text-xs text-slate-600">{riskLevel}</p>}
+      {percent !== undefined && (
+        <div className="mt-2 h-2 w-full rounded-full bg-slate-200">
+          <div className="h-full rounded-full bg-[#0F2B45]" style={{ width: `${percent}%` }} />
+        </div>
+      )}
+    </div>
+  );
 };
 
 export function TabClinical({ patient }: { patient: FullPatientDetails }) {
-  const clinical: any = patient.clinical?.[0] || {};
-  const form = useForm<PatientClinicalDTO>({
-    resolver: zodResolver(PatientClinicalSchema) as any,
-    defaultValues: {
-      patient_id: patient.id,
-      cid_main: clinical.cid_main || "",
-      complexity_level: clinical.complexity_level || "medium",
-      blood_type: clinical.blood_type || "",
-      clinical_summary: clinical.clinical_summary || "",
-      allergies: clinical.allergies || [],
-      devices: clinical.devices || [],
-      risk_braden: clinical.risk_braden || 0,
-      risk_morse: clinical.risk_morse || 0,
-      oxygen_usage: clinical.oxygen_usage || false,
-      oxygen_mode: clinical.oxygen_mode || "",
-      oxygen_interface: clinical.oxygen_interface || "",
-      oxygen_flow: clinical.oxygen_flow || "",
-      oxygen_regime: clinical.oxygen_regime || "",
-      medications: [], // não exibimos medicações aqui
-    },
-  });
+  const { data, error } = useSWR<{ data: ClinicalDashboard }>(
+    `/api/patients/${patient.id}/clinical-dashboard`,
+    fetcher,
+  );
 
-  const [allergyInput, setAllergyInput] = useState("");
-  const [openDevices, setOpenDevices] = useState(false);
-  const [openRisk, setOpenRisk] = useState(false);
-  const oxygenOn = form.watch("oxygen_usage");
-  const devices = form.watch("devices") || [];
-  const allergies = form.watch("allergies") || [];
-
-  const addAllergy = () => {
-    if (!allergyInput.trim()) return;
-    form.setValue("allergies", [...allergies, allergyInput.trim()]);
-    setAllergyInput("");
-  };
-  const removeAllergy = (a: string) => form.setValue("allergies", allergies.filter((x: string) => x !== a));
-
-  const toggleDevice = (d: string) => {
-    form.setValue("devices", devices.includes(d) ? devices.filter((x: string) => x !== d) : [...devices, d]);
-  };
-
-  const updateRisk = (field: "risk_braden" | "risk_morse", value: number) => {
-    form.setValue(field, value);
-  };
-
-  async function onSubmit(data: PatientClinicalDTO) {
-    const res = await upsertClinicalDataAction(data);
-    if (res.success) toast.success("Dados clínicos atualizados!");
-    else toast.error(res.error || "Erro ao salvar.");
-  }
+  const dashboard = data?.data;
+  const loading = !dashboard && !error;
 
   return (
-    <Form {...form}>
-      <div className="flex justify-end mb-4">
+    <div className="space-y-6 pb-16">
+      <div className="flex justify-end">
+        {/* Atalho contextual: abre o GED já filtrado pelo domínio clínico */}
         <GedTriggerButton
           variant="outline"
           size="sm"
           title="GED — Clínico"
           label="Abrir GED clínico"
           filters={{
-            category: DocumentCategoryEnum.enum.Clinico,
             domain: DocumentDomainEnum.enum.Clinico,
-            origin: DocumentOriginEnum.enum.Prontuario,
           }}
         />
       </div>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-16">
-        {/* Coluna esquerda */}
-        <div className="space-y-6">
+
+      {error && (
+        <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          Não foi possível carregar o resumo clínico. Tente novamente em instantes.
+        </div>
+      )}
+
+      {loading && !error && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {[...Array(6)].map((_, idx) => (
+            <Card key={idx} className="shadow-fluent border-slate-100">
+              <CardHeader><Skeleton className="h-5 w-40" /></CardHeader>
+              <CardContent className="space-y-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-4 w-1/3" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {dashboard && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Card 1 */}
           <Card className="shadow-fluent border-slate-200">
             <CardHeader className="border-b border-slate-100">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-base text-[#0F2B45]">
-                  <Heartbeat className="w-5 h-5" /> Resumo do Caso
+                  <Heartbeat className="h-5 w-5" /> Resumo Clínico Geral
                 </CardTitle>
-                <Badge className={complexityBadge(form.watch("complexity_level"))}>{form.watch("complexity_level")}</Badge>
+                <Badge className={complexityBadge(dashboard.summary?.complexityLevel)}>
+                  {dashboard.summary?.complexityLevel || "—"}
+                </Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4 pt-4">
-              <div className="grid grid-cols-3 gap-3">
-                <FormField control={form.control} name="cid_main" render={({ field }) => (
-                  <FormItem><FormLabel>CID Principal</FormLabel><FormControl><Input {...field} placeholder="CID ou texto livre" /></FormControl></FormItem>
-                )} />
-                <FormField control={form.control} name="complexity_level" render={({ field }) => (
-                  <FormItem><FormLabel>Complexidade</FormLabel><FormControl>
-                    <select className="w-full h-9 rounded border border-slate-200 px-2 text-sm" value={field.value} onChange={field.onChange}>
-                      <option value="low">Baixa</option><option value="medium">Média</option><option value="high">Alta</option><option value="critical">Crítica</option>
-                    </select>
-                  </FormControl></FormItem>
-                )} />
-                <FormField control={form.control} name="blood_type" render={({ field }) => (
-                  <FormItem><FormLabel>Tipo Sanguíneo</FormLabel><FormControl><Input {...field} placeholder="A+, O-..." /></FormControl></FormItem>
-                )} />
+            <CardContent className="space-y-3 pt-4">
+              <div className="text-sm text-slate-600">
+                Última atualização em <strong>{formatDate(dashboard.summary?.lastUpdateAt)}</strong>
+                {dashboard.summary?.referenceProfessional?.name && (
+                  <> por <strong>{dashboard.summary.referenceProfessional.name}</strong></>
+                )}
               </div>
-              <FormField control={form.control} name="clinical_summary" render={({ field }) => (
-                <FormItem><FormLabel>Resumo Clínico</FormLabel><FormControl><Textarea {...field} rows={4} placeholder="Paciente com sequela de AVC..." /></FormControl><FormMessage /></FormItem>
-              )} />
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <FormLabel>Alergias</FormLabel>
-                  <div className="flex gap-2">
-                    <Input value={allergyInput} onChange={(e) => setAllergyInput(e.target.value)} placeholder="Nova alergia" className="h-8 w-40 text-sm" />
-                    <Button type="button" size="sm" onClick={addAllergy}><Plus className="w-4 h-4" /></Button>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {allergies.length === 0 && <span className="text-xs text-slate-500">Nenhuma alergia.</span>}
-                  {allergies.map((a: string) => (
-                    <Badge key={a} className="bg-rose-100 text-rose-700 flex items-center gap-1">
-                      {a}
-                      <button type="button" onClick={() => removeAllergy(a)}>×</button>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
+              <p className="text-sm text-slate-700 leading-relaxed">
+                {dashboard.summary?.clinicalSummary || "Nenhum resumo clínico disponível."}
+              </p>
             </CardContent>
           </Card>
 
+          {/* Card 2 */}
           <Card className="shadow-fluent border-slate-200">
-            <CardHeader className="flex items-center justify-between border-b border-slate-100">
-              <CardTitle className="flex items-center gap-2 text-base text-[#0F2B45]"><ClipboardText className="w-5 h-5" /> Invasivos e Suporte</CardTitle>
-              <Sheet open={openDevices} onOpenChange={setOpenDevices}>
-                <SheetTrigger asChild><Button size="sm" variant="outline">Gerenciar Dispositivos</Button></SheetTrigger>
-                <SheetContent className="sm:max-w-sm space-y-3">
-                  <SheetHeader><SheetTitle>Dispositivos</SheetTitle></SheetHeader>
-                  {deviceOptions.map((d) => (
-                    <div key={d} className="flex items-center gap-2">
-                      <Checkbox checked={devices.includes(d)} onCheckedChange={() => toggleDevice(d)} />
-                      <span>{d}</span>
-                    </div>
-                  ))}
-                  <SheetFooter />
-                </SheetContent>
-              </Sheet>
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2 text-base text-[#0F2B45]">
+                <ClipboardText className="h-5 w-5" /> Diagnósticos
+              </CardTitle>
             </CardHeader>
-            <CardContent className="pt-4 flex flex-wrap gap-2">
-              {devices.length === 0 && <span className="text-xs text-slate-500">Nenhum dispositivo marcado.</span>}
-              {devices.map((d: string) => (
-                <Badge key={d} className="bg-emerald-100 text-emerald-700">{d}</Badge>
+            <CardContent className="space-y-3 pt-4">
+              <div>
+                <p className="text-xs uppercase text-slate-500">CID Principal</p>
+                <p className="text-sm font-semibold text-slate-800">
+                  {dashboard.diagnoses.primaryCid || "—"} — {dashboard.diagnoses.primaryDescription || "Sem descrição"}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs uppercase text-slate-500">Diagnósticos secundários</p>
+                <div className="flex flex-wrap gap-2">
+                  {dashboard.diagnoses.secondary.length === 0 && <span className="text-sm text-slate-500">Nenhum diagnóstico adicional informado.</span>}
+                  {dashboard.diagnoses.secondary.map((diag) => (
+                    <Badge key={diag} variant="secondary" className="text-[11px]">{diag}</Badge>
+                  ))}
+                </div>
+              </div>
+              <Button variant="link" size="sm" className="px-0 text-[#0F2B45]" disabled>
+                Ver mais no prontuário (em breve)
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Card 3 */}
+          <Card className="shadow-fluent border-slate-200">
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2 text-base text-[#0F2B45]">
+                <Gauge className="h-5 w-5" /> Escalas e Riscos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3 pt-4 md:grid-cols-2">
+              {dashboard.riskScores.length === 0 && <p className="text-sm text-slate-500">Nenhuma escala avaliada.</p>}
+              {dashboard.riskScores.map((risk) => (
+                <RiskCard key={risk.name} {...risk} />
               ))}
             </CardContent>
           </Card>
-        </div>
 
-        {/* Coluna direita */}
-        <div className="space-y-6">
+          {/* Card 4 */}
           <Card className="shadow-fluent border-slate-200">
-            <CardHeader className="flex items-center justify-between border-b border-slate-100">
-              <CardTitle className="flex items-center gap-2 text-base text-[#0F2B45]"><Gauge className="w-5 h-5" /> Escalas de Risco</CardTitle>
-              <Dialog open={openRisk} onOpenChange={setOpenRisk}>
-                <DialogTrigger asChild><Button size="sm" variant="outline">Nova Avaliação</Button></DialogTrigger>
-                <DialogContent className="sm:max-w-sm space-y-3">
-                  <DialogHeader><DialogTitle>Ajustar Scores</DialogTitle></DialogHeader>
-                  <div className="space-y-2">
-                    <Label>Braden</Label>
-                    <Input type="number" value={form.watch("risk_braden")} onChange={(e)=>updateRisk("risk_braden", Number(e.target.value))} />
-                    <Label>Morse</Label>
-                    <Input type="number" value={form.watch("risk_morse")} onChange={(e)=>updateRisk("risk_morse", Number(e.target.value))} />
-                  </div>
-                </DialogContent>
-              </Dialog>
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2 text-base text-[#0F2B45]">
+                <WarningCircle className="h-5 w-5" /> Alergias
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 pt-4">
-              <div className="p-3 rounded border border-slate-100 bg-slate-50">
-                <p className="text-xs text-slate-500">Braden</p>
-                <p className="text-lg font-semibold text-slate-800">{form.watch("risk_braden")}</p>
-                <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500" style={{ width: `${(Number(form.watch("risk_braden")) / 23) * 100}%` }} />
+            <CardContent className="space-y-3 pt-4">
+              {dashboard.allergies.length === 0 && <p className="text-sm text-slate-500">Nenhuma alergia ativa cadastrada.</p>}
+              {dashboard.allergies.map((item) => (
+                <div key={item.id} className="rounded border border-rose-100 bg-rose-50 p-3 text-sm">
+                  <div className="font-semibold text-rose-800">{item.allergen || "Alergia"}</div>
+                  <p className="text-rose-700">Reação: {item.reaction || "—"}</p>
+                  <div className="text-xs text-rose-700">Gravidade: {item.severity || "Não informado"} · Desde {formatDate(item.since)}</div>
                 </div>
-              </div>
-              <div className="p-3 rounded border border-slate-100 bg-slate-50">
-                <p className="text-xs text-slate-500">Morse</p>
-                <p className="text-lg font-semibold text-slate-800">{form.watch("risk_morse")}</p>
-                <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-rose-500" style={{ width: `${Math.min(100, (Number(form.watch("risk_morse")) / 125) * 100)}%` }} />
-                </div>
-              </div>
+              ))}
             </CardContent>
           </Card>
 
-          <Card className="shadow-fluent border-slate-200">
-            <CardHeader className="flex items-center justify-between border-b border-slate-100">
-              <CardTitle className="flex items-center gap-2 text-base text-[#0F2B45]"><Wind className="w-5 h-5" /> Suporte Ventilatório</CardTitle>
+          {/* Card 5 */}
+          <Card className="shadow-fluent border-slate-200 lg:col-span-2">
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2 text-base text-[#0F2B45]">
+                <Pill className="h-5 w-5" /> Medicações em uso
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 pt-4">
-              <div className="flex items-center gap-2">
-                <Checkbox checked={oxygenOn} onCheckedChange={(v)=>form.setValue("oxygen_usage", !!v)} />
-                <span>Paciente em uso de O2?</span>
-              </div>
-              {oxygenOn && (
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField control={form.control} name="oxygen_mode" render={({ field }) => (
-                    <FormItem><FormLabel>Modo</FormLabel><FormControl><Input {...field} placeholder="Cilindro/Concentrador" /></FormControl></FormItem>
-                  )} />
-                  <FormField control={form.control} name="oxygen_interface" render={({ field }) => (
-                    <FormItem><FormLabel>Interface</FormLabel><FormControl><Input {...field} placeholder="Cateter/Máscara" /></FormControl></FormItem>
-                  )} />
-                  <FormField control={form.control} name="oxygen_flow" render={({ field }) => (
-                    <FormItem><FormLabel>Fluxo (L/min)</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                  )} />
-                  <FormField control={form.control} name="oxygen_regime" render={({ field }) => (
-                    <FormItem><FormLabel>Regime</FormLabel><FormControl><Input {...field} placeholder="Contínuo/Noturno" /></FormControl></FormItem>
-                  )} />
+            <CardContent className="pt-4">
+              {dashboard.medications.length === 0 ? (
+                <p className="text-sm text-slate-500">Nenhuma medicação ativa registrada.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Medicamento</TableHead>
+                        <TableHead>Posologia</TableHead>
+                        <TableHead>Frequência</TableHead>
+                        <TableHead>Via</TableHead>
+                        <TableHead>Atualizado em</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dashboard.medications.map((med) => (
+                        <TableRow key={med.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {med.isCritical && <Badge variant="destructive" className="text-[10px]">Crítica</Badge>}
+                              <span className="font-semibold text-slate-800">{med.name || "Medicação"}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>{med.dosage || "—"}</TableCell>
+                          <TableCell>{med.frequency || "—"}</TableCell>
+                          <TableCell>{med.route || "—"}</TableCell>
+                          <TableCell>{formatDate(med.updatedAt)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <Button type="submit" className="w-full bg-[#0F2B45] text-white">Salvar alterações</Button>
+          {/* Card 6 */}
+          <Card className="shadow-fluent border-slate-200">
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2 text-base text-[#0F2B45]">
+                <Wind className="h-5 w-5" /> Terapia de O2 & Dispositivos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <div>
+                <p className="text-xs uppercase text-slate-500">Terapia de Oxigênio</p>
+                {dashboard.oxygenTherapy ? (
+                  <div className="mt-2 space-y-1 text-sm text-slate-700">
+                    <div>Fluxo: <strong>{dashboard.oxygenTherapy.flow ?? "—"}</strong> L/min</div>
+                    <div>Interface: <strong>{dashboard.oxygenTherapy.interface || "—"}</strong></div>
+                    <div>Modo/Fonte: <strong>{dashboard.oxygenTherapy.mode || dashboard.oxygenTherapy.source || "—"}</strong></div>
+                    <div>Desde: <strong>{formatDate(dashboard.oxygenTherapy.since)}</strong></div>
+                    {dashboard.oxygenTherapy.notes && <div>Observações: {dashboard.oxygenTherapy.notes}</div>}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">Sem terapia de O2 ativa.</p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs uppercase text-slate-500">Dispositivos ativos</p>
+                <div className="mt-2 space-y-2">
+                  {dashboard.devices.length === 0 && <p className="text-sm text-slate-500">Nenhum dispositivo cadastrado.</p>}
+                  {dashboard.devices.map((device) => (
+                    <div key={device.id} className="rounded border border-slate-100 bg-slate-50 p-3 text-sm">
+                      <p className="font-semibold text-slate-800">{device.type || "Dispositivo"}</p>
+                      <p className="text-slate-600">{device.description || "Sem descrição"}</p>
+                      <p className="text-xs text-slate-500">Instalado em {formatDate(device.installedAt)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Card 7 */}
+          <Card className="shadow-fluent border-slate-200">
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="text-base text-[#0F2B45]">Tags Clínicas & Observações</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-4">
+              <div>
+                <p className="text-xs uppercase text-slate-500">Tags</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {dashboard.tags.length === 0 && <span className="text-sm text-slate-500">Nenhuma tag clínica.</span>}
+                  {dashboard.tags.map((tag) => (
+                    <Badge key={tag} variant="outline" className="text-[11px] uppercase tracking-wide">{tag}</Badge>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-slate-500">Observações adicionais</p>
+                <div className="mt-2 rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                  {dashboard.observations || "Nenhuma observação adicional registrada."}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </form>
-    </Form>
+      )}
+    </div>
   );
 }
