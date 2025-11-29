@@ -1,39 +1,14 @@
 "use server";
 
-import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { PatientDocumentZ } from "@/schemas/patient.document";
 import { DocumentStatusEnum } from "@/data/definitions/documents";
+import { fileHashMd5, parseTagsInput } from "@/lib/ged/utils";
+import { logDocumentEvent } from "@/lib/ged/logging";
 
 const BUCKET = "patient-documents";
 
 type UploadResult = { success: boolean; error?: string };
-
-async function logDocumentEvent(documentId: string, patientId: string, action: string, userId?: string | null, details?: any) {
-  const supabase = await createClient();
-  const { data: patient } = await supabase.from("patients").select("tenant_id").eq("id", patientId).maybeSingle();
-  const tenantId = patient?.tenant_id;
-  if (!tenantId) return; // evita falha por FK/NOT NULL
-  await supabase.from("patient_document_logs").insert({
-    document_id: documentId,
-    tenant_id: tenantId,
-    user_id: userId || null,
-    action,
-    details: details ? JSON.stringify(details) : null,
-  });
-}
-
-function fileHashMd5(buffer: Buffer) {
-  try {
-    return crypto.createHash("md5").update(buffer).digest("hex");
-  } catch {
-    return null;
-  }
-}
-
-function parseTagsFromForm(value?: string | null) {
-  return value ? value.split(",").map((t) => t.trim()).filter(Boolean) : null;
-}
 
 export async function uploadDocument(formData: FormData): Promise<UploadResult> {
   const file = formData.get("file") as unknown as File | null;
@@ -95,7 +70,7 @@ export async function uploadDocument(formData: FormData): Promise<UploadResult> 
     clinical_evolution_id: (formData.get("clinical_evolution_id") as string) || null,
     prescription_id: (formData.get("prescription_id") as string) || null,
     related_object_id: (formData.get("related_object_id") as string) || null,
-    tags: parseTagsFromForm(formData.get("tags") as string),
+    tags: parseTagsInput(formData.get("tags") as string | null),
     public_notes: (formData.get("public_notes") as string) || null,
     internal_notes: (formData.get("internal_notes") as string) || null,
     uploaded_at: new Date(),
@@ -108,7 +83,20 @@ export async function uploadDocument(formData: FormData): Promise<UploadResult> 
   const { error: insertError, data } = await supabase.from("patient_documents").insert(parsed.data).select("id").single();
   if (insertError) return { success: false, error: insertError.message };
 
-  await logDocumentEvent(data.id, patientId, "Upload", uploaderId, { file: file.name });
+  await logDocumentEvent(
+    data.id,
+    patientId,
+    "document.create",
+    uploaderId,
+    { file: file.name },
+    {
+      category: payload.category,
+      domain: payload.domain,
+      origin_module: payload.origin_module,
+      document_status: payload.document_status,
+      version: payload.version,
+    },
+  );
   return { success: true };
 }
 
@@ -168,13 +156,28 @@ export async function newDocumentVersion(previousId: string, formData: FormData)
 
   const { error: insertError, data } = await supabase.from("patient_documents").insert(parsed.data).select("id").single();
   if (insertError) return { success: false, error: insertError.message };
-  await logDocumentEvent(data.id, previous.patient_id, "NewVersion", authUser?.user?.id || null, { previousId });
+  await logDocumentEvent(
+    data.id,
+    previous.patient_id,
+    "document.version_create",
+    authUser?.user?.id || null,
+    { previousId },
+    {
+      category: payload.category,
+      domain: payload.domain,
+      origin_module: payload.origin_module,
+      document_status: payload.document_status,
+      version: payload.version,
+    },
+  );
   return { success: true };
 }
 
 export async function updateDocumentMeta(id: string, metadata: Partial<Record<string, any>>) {
   const supabase = await createClient();
   const { data: authUser } = await supabase.auth.getUser();
+  const { data: existing, error: fetchError } = await supabase.from("patient_documents").select("*").eq("id", id).maybeSingle();
+  if (fetchError || !existing) return { success: false, error: "Documento não encontrado" };
   const allowed = [
     "title",
     "description",
@@ -209,7 +212,7 @@ export async function updateDocumentMeta(id: string, metadata: Partial<Record<st
     if (metadata[k] !== undefined) payload[k] = metadata[k];
   });
   if (metadata.tags && typeof metadata.tags === "string") {
-    payload.tags = parseTagsFromForm(metadata.tags);
+    payload.tags = parseTagsInput(metadata.tags);
   }
   if (metadata.expires_at !== undefined) {
     payload.expires_at = metadata.expires_at ? new Date(metadata.expires_at as any) : null;
@@ -229,8 +232,35 @@ export async function updateDocumentMeta(id: string, metadata: Partial<Record<st
   payload.updated_by = authUser?.user?.id || null;
   const { error } = await supabase.from("patient_documents").update(payload).eq("id", id);
   if (error) return { success: false, error: error.message };
-  const { data: doc } = await supabase.from("patient_documents").select("patient_id").eq("id", id).maybeSingle();
-  if (doc?.patient_id) await logDocumentEvent(id, doc.patient_id, "UpdateMeta", authUser?.user?.id || null, payload);
+  const patientId = existing.patient_id;
+  const newStatus = (payload.document_status as string | undefined) || existing.document_status;
+  const metaForLog = {
+    category: (payload.category as string | undefined) || existing.category,
+    domain: (payload.domain as string | undefined) || existing.domain,
+    origin_module: (payload.origin_module as string | undefined) || existing.origin_module,
+    document_status: newStatus,
+    version: existing.version,
+  };
+  if (patientId) {
+    await logDocumentEvent(id, patientId, "document.update", authUser?.user?.id || null, payload, metaForLog);
+    if (metadata.is_verified !== undefined) {
+      await logDocumentEvent(
+        id,
+        patientId,
+        payload.is_verified ? "document.verify" : "document.unverify",
+        authUser?.user?.id || null,
+        payload,
+        metaForLog,
+      );
+    }
+    if (metadata.document_status && metadata.document_status !== existing.document_status) {
+      if (metadata.document_status === "Arquivado") {
+        await logDocumentEvent(id, patientId, "document.archive", authUser?.user?.id || null, payload, metaForLog);
+      } else if (existing.document_status === "Arquivado") {
+        await logDocumentEvent(id, patientId, "document.restore", authUser?.user?.id || null, payload, metaForLog);
+      }
+    }
+  }
   return { success: true };
 }
 
@@ -247,7 +277,9 @@ export async function archiveDocument(id: string) {
     })
     .eq("id", id);
   if (error) return { success: false, error: error.message };
-  if (doc?.patient_id) await logDocumentEvent(id, doc.patient_id, "Archive", authUser?.user?.id || null);
+  if (doc?.patient_id) await logDocumentEvent(id, doc.patient_id, "document.archive", authUser?.user?.id || null, {
+    document_status: "Arquivado",
+  });
   return { success: true };
 }
 
@@ -280,7 +312,7 @@ export async function listDocuments(
   if (filters?.uploaded_to) query = query.lte("uploaded_at", filters.uploaded_to);
   if (filters?.subcategory) query = query.ilike("subcategory", `%${filters.subcategory}%`);
   if (filters?.tags) {
-    const tagArr = parseTagsFromForm(filters.tags);
+    const tagArr = parseTagsInput(filters.tags);
     if (tagArr && tagArr.length > 0) query = query.contains("tags", tagArr);
   }
   const orderBy = filters?.order_by || "uploaded_at";
@@ -389,7 +421,8 @@ export async function generatePreviewUrl(
   if (error || !data?.signedUrl) return { success: false, error: error?.message || "Erro ao gerar link" };
 
   if (documentId && patientId) {
-    await logDocumentEvent(documentId, patientId, opts?.action || "Preview", authUser?.user?.id || null, { via: "signed_url" });
+    const actionName = opts?.action === "Download" ? "document.download" : "document.view";
+    await logDocumentEvent(documentId, patientId, actionName, authUser?.user?.id || null, { via: "signed_url" });
   }
 
   return { success: true, url: data.signedUrl };

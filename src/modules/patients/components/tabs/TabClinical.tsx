@@ -18,6 +18,8 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Heartbeat, Gauge, Wind, Plus, ClipboardText } from "@phosphor-icons/react";
+import { GedTriggerButton } from "@/components/ged/GedTriggerButton";
+import { DocumentCategoryEnum, DocumentDomainEnum, DocumentOriginEnum } from "@/data/definitions/documents";
 
 const deviceOptions = ["GTT", "TQT", "SVD", "CVC", "PICC", "Marcapasso"];
 
@@ -84,6 +86,19 @@ export function TabClinical({ patient }: { patient: FullPatientDetails }) {
 
   return (
     <Form {...form}>
+      <div className="flex justify-end mb-4">
+        <GedTriggerButton
+          variant="outline"
+          size="sm"
+          title="GED — Clínico"
+          label="Abrir GED clínico"
+          filters={{
+            category: DocumentCategoryEnum.enum.Clinico,
+            domain: DocumentDomainEnum.enum.Clinico,
+            origin: DocumentOriginEnum.enum.Prontuario,
+          }}
+        />
+      </div>
       <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-16">
         {/* Coluna esquerda */}
         <div className="space-y-6">

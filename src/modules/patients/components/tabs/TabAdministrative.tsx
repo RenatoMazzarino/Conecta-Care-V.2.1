@@ -17,6 +17,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Calendar, ShieldCheck, ListChecks, ClipboardText } from "@phosphor-icons/react";
 import { Label } from "@/components/ui/label";
+import { GedTriggerButton } from "@/components/ged/GedTriggerButton";
+import { DocumentDomainEnum } from "@/data/definitions/documents";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 const dateStr = (v?: string | null) => (v ? v.split("T")[0] : "");
@@ -215,6 +217,18 @@ export function TabAdministrative({ patient }: { patient: FullPatientDetails }) 
 
   return (
     <Form {...form}>
+      <div className="flex justify-end mb-4">
+        {/* Contextual shortcut: opens GED already scoped to documentos administrativos, but the user can change filters afterward */}
+        <GedTriggerButton
+          variant="outline"
+          size="sm"
+          title="GED — Administrativo"
+          label="Abrir GED administrativo"
+          filters={{
+            domain: DocumentDomainEnum.enum.Administrativo,
+          }}
+        />
+      </div>
       <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 xl:grid-cols-3 gap-6 pb-16">
 
         <div className="xl:col-span-2 space-y-6">

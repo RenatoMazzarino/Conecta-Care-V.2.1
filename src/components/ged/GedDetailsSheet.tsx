@@ -8,33 +8,43 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { generatePreviewUrl, getDocumentDetails, getDocumentLogs, getDocumentVersions } from "@/app/(app)/ged/actions";
 import { DownloadSimple } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 type Props = {
+  patientId: string;
   documentId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialTab?: "meta" | "versions" | "logs";
 };
 
-const fetcher = async (key: string, fn: (...args: any[]) => Promise<any>, ...args: any[]) => {
-  const data = await fn(...args);
-  return data;
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || "Erro ao carregar dados");
+  return json.data;
 };
 
-export function GedDetailsSheet({ documentId, open, onOpenChange, initialTab = "meta" }: Props) {
-  const enabled = useMemo(() => open && !!documentId, [open, documentId]);
-  const { data: details } = useSWR(enabled ? ["doc-details", documentId] : null, ([, id]) => fetcher("details", getDocumentDetails, id));
-  const { data: versions } = useSWR(enabled ? ["doc-versions", documentId] : null, ([, id]) => fetcher("versions", getDocumentVersions, id));
-  const { data: logs } = useSWR(enabled ? ["doc-logs", documentId] : null, ([, id]) => fetcher("logs", getDocumentLogs, id));
+export function GedDetailsSheet({ patientId, documentId, open, onOpenChange, initialTab = "meta" }: Props) {
+  const enabled = useMemo(() => open && !!documentId && !!patientId, [open, documentId, patientId]);
+  const detailUrl = enabled && documentId ? `/api/patients/${patientId}/documents/${documentId}` : null;
+  const versionsUrl = enabled && documentId ? `/api/patients/${patientId}/documents/${documentId}/versions` : null;
+  const logsUrl = enabled && documentId ? `/api/patients/${patientId}/documents/${documentId}/logs` : null;
+  const { data: details, error: detailError } = useSWR(detailUrl, fetcher);
+  const { data: versions } = useSWR(versionsUrl, fetcher);
+  const { data: logs } = useSWR(logsUrl, fetcher);
 
   const handleDownload = async (storagePath?: string) => {
     if (!storagePath || !documentId) return;
-    const res = await generatePreviewUrl(storagePath, { documentId, action: "Download" });
-    if (!res.success || !res.url) return toast.error(res.error || "Erro ao gerar link");
-    window.open(res.url, "_blank");
+    const res = await fetch("/api/ged/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storagePath, documentId, action: "Download" }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.url) return toast.error(json.error || "Erro ao gerar link");
+    window.open(json.url, "_blank");
   };
 
   return (
@@ -45,7 +55,9 @@ export function GedDetailsSheet({ documentId, open, onOpenChange, initialTab = "
         </SheetHeader>
 
         {!details ? (
-          <div className="text-slate-500 text-sm mt-4">Carregando...</div>
+          <div className="text-slate-500 text-sm mt-4">
+            {detailError ? detailError.message : "Carregando..."}
+          </div>
         ) : (
           <Tabs defaultValue={initialTab} className="mt-4">
             <TabsList>

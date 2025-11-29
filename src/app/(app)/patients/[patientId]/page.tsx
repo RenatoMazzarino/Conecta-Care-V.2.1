@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getPatientDetails } from "@/modules/patients/patient.data";
 import { PatientTabsLayout } from "@/modules/patients/components/PatientTabsLayout";
 import { PatientHeader } from "@/components/patients/v2/patient-header";
+import { GedPanelProvider } from "@/components/ged/ged-panel-provider";
 import { getPatientHeaderData } from "./actions.getHeader";
 
 export const dynamic = "force-dynamic";
@@ -13,12 +14,27 @@ export default async function PatientDetailsPage({ params }: { params: Promise<{
 
   if (!patient) return notFound();
 
+  const makePatientCode = (id?: string) => {
+    if (!id) return null;
+    const clean = id.replace(/-/g, "");
+    const core = clean.slice(0, 8).toUpperCase();
+    return `PAC-${core}`;
+  };
+
+  const gedPatientInfo = {
+    name: headerData?.identity.name || patient.display_name || patient.full_name,
+    status: headerData?.identity.status || patient.record_status || patient.status,
+    identifier: makePatientCode(patient.id),
+  };
+
   return (
-    <div className="min-h-screen bg-[#faf9f8]">
-      <PatientHeader patientId={patient.id} headerData={headerData} fallbackPatient={patient} />
-      <div className="bg-white px-0">
-        <PatientTabsLayout patient={patient} embedded />
+    <GedPanelProvider patientId={patient.id} patientInfo={gedPatientInfo}>
+      <div className="min-h-screen bg-[#faf9f8]">
+        <PatientHeader patientId={patient.id} headerData={headerData} fallbackPatient={patient} />
+        <div className="bg-white px-0">
+          <PatientTabsLayout patient={patient} embedded />
+        </div>
       </div>
-    </div>
+    </GedPanelProvider>
   );
 }

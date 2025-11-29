@@ -11,12 +11,12 @@ import { TabTeam } from "./tabs/TabTeam";
 import { TabInventory } from "./tabs/TabInventory";
 import { TabAdministrative } from "./tabs/TabAdministrative";
 import { TabFinancial } from "./tabs/TabFinancial";
-import { TabDocuments } from "./tabs/TabDocuments";
 import { TabHistoryAudit } from "@/components/patients/v2/tab-history-audit";
 import { BusinessProcessFlow, BPF_STEPS } from "@/components/patients/v2/business-process-flow";
 import * as React from "react";
 import { WarningCircle } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { useGedPanel } from "@/components/ged/ged-panel-provider";
 
 const tabs = [
   { id: "general", label: "Visão Geral" },
@@ -27,7 +27,6 @@ const tabs = [
   { id: "inventory", label: "Estoque" },
   { id: "administrative", label: "Administrativo" },
   { id: "financial", label: "Financeiro" },
-  { id: "documents", label: "Documentos" },
   { id: "history", label: "Histórico" },
 ];
 
@@ -36,6 +35,7 @@ export function PatientTabsLayout({ patient, embedded = false }: { patient: Full
   const [activeTab, setActiveTab] = React.useState(isAdmissionFlow ? "personal" : "general");
   const [localCompleted, setLocalCompleted] = React.useState<string[]>([]);
   const [warnings, setWarnings] = React.useState<string[]>([]);
+  const { openGedPanel } = useGedPanel();
 
   const contentWrapper = embedded ? "bg-[#faf9f8] pt-6" : "bg-[#faf9f8] min-h-screen py-8 px-6";
   const innerSpacing = embedded ? "max-w-[1600px] mx-auto px-8" : "max-w-[1600px] mx-auto";
@@ -52,13 +52,16 @@ export function PatientTabsLayout({ patient, embedded = false }: { patient: Full
   ];
 
   const handleStepChange = (stepId: string) => {
+    if (stepId === "documents") {
+      openGedPanel({ title: "GED do Paciente" });
+      return;
+    }
     const map: Record<string, string> = {
       personal: "personal",
       address: "address",
       clinical: "clinical",
       administrative: "administrative",
       financial: "financial",
-      documents: "documents",
       review: "general",
     };
     setActiveTab(map[stepId] || "personal");
@@ -88,9 +91,6 @@ export function PatientTabsLayout({ patient, embedded = false }: { patient: Full
         break;
       case "financial":
         if (!patient.financial || patient.financial.length === 0) missing.push("Dados financeiros");
-        break;
-      case "documents":
-        if (!patient.documents || patient.documents.length === 0) missing.push("Documentos");
         break;
       default:
         break;
@@ -191,7 +191,6 @@ export function PatientTabsLayout({ patient, embedded = false }: { patient: Full
           {activeTab === "inventory" && <TabInventory patient={patient} />}
           {activeTab === "administrative" && <TabAdministrative patient={patient} />}
           {activeTab === "financial" && <TabFinancial patient={patient} />}
-          {activeTab === "documents" && <TabDocuments patient={patient} />}
           {activeTab === "history" && <TabHistoryAudit patient={patient} />}
         </div>
       </div>

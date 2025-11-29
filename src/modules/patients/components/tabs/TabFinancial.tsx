@@ -25,6 +25,8 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Lock, Calculator, UserCircle, TrendUp, Plus, LinkSimple, Phone, IdentificationCard } from "@phosphor-icons/react";
 import { addLedgerEntry, markLedgerPaid } from "@/app/(app)/patients/actions.financial";
+import { GedTriggerButton } from "@/components/ged/GedTriggerButton";
+import { DocumentDomainEnum } from "@/data/definitions/documents";
 
 const formatCurrency = (v?: number | null) => (v !== undefined && v !== null ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "R$ 0,00");
 const formatDate = (d?: string | Date | null) => (d ? format(new Date(d), "dd/MM/yyyy") : "—");
@@ -200,6 +202,18 @@ export function TabFinancial({ patient }: { patient: FullPatientDetails }) {
 
   return (
     <Form {...form}>
+      <div className="flex justify-end mb-4">
+        {/* Contextual shortcut: opens GED focused em documentos financeiros; filtros continuam editáveis dentro do drawer */}
+        <GedTriggerButton
+          variant="outline"
+          size="sm"
+          title="GED — Financeiro"
+          label="Abrir GED financeiro"
+          filters={{
+            domain: DocumentDomainEnum.enum.Financeiro,
+          }}
+        />
+      </div>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-16">
         {/* Espelho admin (read-only) */}
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 flex items-center justify-between gap-4">
@@ -316,7 +330,7 @@ export function TabFinancial({ patient }: { patient: FullPatientDetails }) {
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-xl">
                       <DialogHeader><DialogTitle>Selecionar contato</DialogTitle></DialogHeader>
-                      <div className="max-h-[320px] overflow-y-auto space-y-2">
+                      <div className="max-h-80 overflow-y-auto space-y-2">
                         {relatedPersons.length === 0 && <p className="text-sm text-slate-500">Nenhum contato cadastrado na Rede de Apoio.</p>}
                         {relatedPersons.map((p) => (
                           <button
