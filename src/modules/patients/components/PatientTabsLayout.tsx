@@ -11,7 +11,7 @@ import { TabTeam } from "./tabs/TabTeam";
 import { TabInventory } from "./tabs/TabInventory";
 import { TabAdministrative } from "./tabs/TabAdministrative";
 import { TabFinancial } from "./tabs/TabFinancial";
-import { TabHistoryAudit } from "@/components/patients/v2/tab-history-audit";
+import { TabHistory } from "./tabs/TabHistory";
 import { BusinessProcessFlow, BPF_STEPS } from "@/components/patients/v2/business-process-flow";
 import * as React from "react";
 import { WarningCircle } from "@phosphor-icons/react";
@@ -191,7 +191,7 @@ export function PatientTabsLayout({ patient, embedded = false }: { patient: Full
           {activeTab === "inventory" && <TabInventory patient={patient} />}
           {activeTab === "administrative" && <TabAdministrative patient={patient} />}
           {activeTab === "financial" && <TabFinancial patient={patient} />}
-          {activeTab === "history" && <TabHistoryAudit patient={patient} />}
+          {activeTab === "history" && <TabHistory patient={patient} />}
         </div>
       </div>
     </>

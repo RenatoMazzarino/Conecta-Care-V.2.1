@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { WarningCircle, FloppyDisk, Printer, ShareNetwork, Prohibit, DotsThree, FolderSimple } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { GedTriggerButton } from "@/components/ged/GedTriggerButton";
+import { toast } from "sonner";
 
 type Props = {
   patientId: string;
@@ -82,6 +83,12 @@ export function PatientHeader({ headerData, fallbackPatient, onTabChange }: Prop
       .toUpperCase() || "--";
   }, [data?.identity.name]);
 
+  const handleUnavailableAction = (label: string) => {
+    toast.info(`${label} ainda não está disponível`, {
+      description: "Use o botão Salvar da aba correspondente enquanto finalizamos esta ação.",
+    });
+  };
+
   if (loading) {
     return (
       <div className="bg-white border-b border-slate-200 shadow-sm px-8 py-6 space-y-3">
@@ -102,16 +109,21 @@ export function PatientHeader({ headerData, fallbackPatient, onTabChange }: Prop
       <div className="px-8 pt-4 pb-2 max-w-[1600px] mx-auto">
         <div className="flex items-center justify-between mb-3 text-sm text-slate-600">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" className="gap-2">
+            <Button variant="ghost" size="sm" className="gap-2" onClick={() => handleUnavailableAction("Salvar e Fechar")}>
               <FloppyDisk size={16} weight="bold" /> Salvar e Fechar
             </Button>
-            <Button variant="ghost" size="sm" className="gap-2">
+            <Button variant="ghost" size="sm" className="gap-2" onClick={() => handleUnavailableAction("Imprimir Ficha")}>
               <Printer size={16} /> Imprimir Ficha
             </Button>
-            <Button variant="ghost" size="sm" className="gap-2">
+            <Button variant="ghost" size="sm" className="gap-2" onClick={() => handleUnavailableAction("Compartilhar")}>
               <ShareNetwork size={16} /> Compartilhar
             </Button>
-            <Button variant="ghost" size="sm" className="gap-2 text-rose-700 hover:bg-rose-50">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-rose-700 hover:bg-rose-50"
+              onClick={() => handleUnavailableAction("Inativar")}
+            >
               <Prohibit size={16} /> Inativar
             </Button>
             {fallbackPatient && (

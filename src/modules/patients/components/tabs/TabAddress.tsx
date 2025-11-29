@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PatientAddressZ, PatientAddressForm } from '@/schemas/patient.address';
 import { upsertAddress } from '@/app/(app)/patients/actions.upsertAddress';
 import { FullPatientDetails } from '@/modules/patients/patient.data';
 import { useToast } from '@/hooks/use-toast';
+import { useCep } from '@/hooks/use-cep';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +21,9 @@ import { MapPin, Truck, Shield, Lightning as Zap, FloppyDisk as Save } from '@ph
 export function TabAddress({ patient }: { patient: FullPatientDetails }) {
   const toast = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  const { fetchCep, loading: isFetchingCep } = useCep();
+  const [lastCepLookup, setLastCepLookup] = useState<string | null>(null);
+  const [cepError, setCepError] = useState<string | null>(null);
 
   const addr = (patient.address?.[0] as any) ?? {};
   const dom = (patient.domicile?.[0] as any) ?? {};
@@ -84,6 +88,47 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
     defaultValues,
   });
 
+  const zipValue = form.watch('zipCode');
+
+  const applyCepData = (data: { street: string; neighborhood: string; city: string; state: string }) => {
+    form.setValue('addressLine', data.street || '', { shouldDirty: true });
+    form.setValue('neighborhood', data.neighborhood || '', { shouldDirty: true });
+    form.setValue('city', data.city || '', { shouldDirty: true });
+    form.setValue('state', data.state || '', { shouldDirty: true });
+  };
+
+  const handleCepLookup = async (rawCep?: string, options: { silent?: boolean } = {}) => {
+    const cep = rawCep ?? zipValue ?? '';
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) {
+      if (!options.silent) setCepError('Informe um CEP com 8 dígitos.');
+      return;
+    }
+    const data = await fetchCep(cleanCep);
+    if (!data) {
+      if (!options.silent) setCepError('CEP não encontrado.');
+      return;
+    }
+    setCepError(null);
+    setLastCepLookup(cleanCep);
+    form.setValue('zipCode', cleanCep.replace(/(\d{5})(\d{3})/, '$1-$2'), { shouldDirty: true });
+    applyCepData(data);
+    if (!options.silent) {
+      toast('CEP encontrado', { description: `${data.street}, ${data.neighborhood} - ${data.city}/${data.state}` });
+    }
+  };
+
+  useEffect(() => {
+    const clean = (zipValue || '').replace(/\D/g, '');
+    if (clean.length === 8 && clean !== lastCepLookup) {
+      void handleCepLookup(clean, { silent: true });
+    }
+  }, [zipValue, lastCepLookup]);
+
+  useEffect(() => {
+    if (cepError) setCepError(null);
+  }, [zipValue, cepError]);
+
   async function onSubmit(data: PatientAddressForm) {
     setIsSaving(true);
     try {
@@ -125,7 +170,25 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                 <div className="grid grid-cols-12 gap-4">
                   <div className="col-span-4">
                     <FormField control={form.control} name="zipCode" render={({ field }) => (
-                      <FormItem><FormLabel>CEP</FormLabel><FormControl><Input {...field} placeholder="00000-000" /></FormControl><FormMessage /></FormItem>
+                      <FormItem>
+                        <FormLabel>CEP</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <FormControl>
+                            <Input {...field} placeholder="00000-000" />
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCepLookup(field.value)}
+                            disabled={isFetchingCep}
+                          >
+                            {isFetchingCep ? 'Buscando...' : 'Buscar CEP'}
+                          </Button>
+                        </div>
+                        <FormMessage />
+                        {cepError && <p className="text-xs text-rose-600">{cepError}</p>}
+                      </FormItem>
                     )} />
                   </div>
                   <div className="col-span-8">

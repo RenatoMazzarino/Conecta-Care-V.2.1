@@ -12,7 +12,23 @@ export async function upsertPersonalAction(data: PatientPersonalDTO) {
     return { success: false, error: "Dados inválidos: " + JSON.stringify(parsed.error.format()) };
   }
 
-  const { patient_id, civil_documents, marketing_consent_status, marketing_consent_history, ...updates } = parsed.data;
+  const {
+    patient_id,
+    civil_documents,
+    marketing_consent_status,
+    marketing_consent_history,
+    cpf_status_label: _cpf_status_label,
+    display_name: _display_name,
+    flag_email_accepted: _flag_email_accepted,
+    flag_sms_accepted: _flag_sms_accepted,
+    flag_whatsapp_accepted: _flag_whatsapp_accepted,
+    ...updates
+  } = parsed.data as PatientPersonalDTO & Record<string, unknown>;
+  void _cpf_status_label;
+  void _display_name;
+  void _flag_email_accepted;
+  void _flag_sms_accepted;
+  void _flag_whatsapp_accepted;
 
   // Rastreio de consentimento: se flags ou status mudarem, registrar histórico
   try {

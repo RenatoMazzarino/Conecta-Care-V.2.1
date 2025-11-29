@@ -170,7 +170,6 @@ export type FullPatientDetails = {
   record_status?: string | null;
   onboarding_step?: number | null;
   nickname?: string | null;
-  display_name?: string | null;
   education_level?: string | null;
   profession?: string | null;
   race_color?: string | null;
@@ -186,8 +185,7 @@ export type FullPatientDetails = {
   marketing_consented_at?: string | null;
   marketing_consent_source?: string | null;
   marketing_consent_ip?: string | null;
-  flag_sms_accepted?: boolean | null;
-  flag_email_accepted?: boolean | null;
+  marketing_consent_status?: "pending" | "accepted" | "rejected" | null;
   civil_documents?: Array<{
     id: string;
     patient_id?: string | null;
@@ -351,8 +349,10 @@ export async function getPatients(): Promise<PatientListItem[]> {
       marketing_consented_at,
       marketing_consent_source,
       marketing_consent_ip,
-      flag_sms_accepted,
-      flag_email_accepted,
+      accept_sms,
+      accept_email,
+      block_marketing,
+      marketing_consent_status,
       created_at
     `)
     .order("created_at", { ascending: false });

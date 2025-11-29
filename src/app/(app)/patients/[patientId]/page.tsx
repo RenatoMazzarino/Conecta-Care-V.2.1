@@ -21,8 +21,9 @@ export default async function PatientDetailsPage({ params }: { params: Promise<{
     return `PAC-${core}`;
   };
 
+  const fallbackName = patient.social_name || patient.full_name;
   const gedPatientInfo = {
-    name: headerData?.identity.name || patient.display_name || patient.full_name,
+    name: headerData?.identity.name || fallbackName,
     status: headerData?.identity.status || patient.record_status || patient.status,
     identifier: makePatientCode(patient.id),
   };

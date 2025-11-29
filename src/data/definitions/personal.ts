@@ -21,7 +21,6 @@ export const PatientPersonalSchema = z.object({
 
   salutation: z.string().optional(),
   nickname: z.string().optional(),
-  display_name: z.string().optional(),
   social_name: z.string().optional(),
   pronouns: z.enum(["Ele/Dele", "Ela/Dela", "Elu/Delu", "Outro"]).optional(),
   gender_identity: z.enum(["Cisgenero", "Transgenero", "Nao Binario", "Outro", "Prefiro nao informar"]).optional(),
@@ -51,7 +50,7 @@ export const PatientPersonalSchema = z.object({
   race_color: z.enum(["Branca", "Preta", "Parda", "Amarela", "Indígena", "Não declarado"]).optional(),
   is_pcd: z.boolean().default(false),
   photo_consent: z.boolean().default(false),
-  photo_consent_date: z.string().datetime().optional(),
+  photo_consent_date: z.coerce.date().optional(),
 
   // Documentos
   cpf: z.string().min(11, "CPF obrigatório"),
@@ -91,8 +90,6 @@ export const PatientPersonalSchema = z.object({
   marketing_consented_at: z.string().datetime().optional(),
   marketing_consent_source: z.string().optional(),
   marketing_consent_ip: z.string().optional(),
-  flag_sms_accepted: z.boolean().default(false),
-  flag_email_accepted: z.boolean().default(false),
   marketing_consent_status: z.enum(["pending", "accepted", "rejected"]).optional(),
   marketing_consent_history: z.string().optional(),
 });

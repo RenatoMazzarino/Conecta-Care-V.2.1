@@ -1,7 +1,7 @@
 'use client';
 
-import { useFieldArray, useForm } from "react-hook-form";
-import { useState } from "react";
+import { useFieldArray, useForm, type FieldErrors } from "react-hook-form";
+import { useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PatientPersonalSchema, PatientPersonalDTO } from "@/data/definitions/personal";
 import { upsertPersonalAction } from "../../actions.upsertPersonal";
@@ -12,10 +12,66 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { WarningCircle } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+
+const DOC_STATUS_OPTIONS = [
+  "Pendente",
+  "Validado",
+  "Rejeitado",
+  "Nao_Validado",
+  "Inconsistente",
+] as const;
+
+type DocValidationStatus = (typeof DOC_STATUS_OPTIONS)[number];
+
+const normalizeDocValidationStatus = (value?: string | null): DocValidationStatus => {
+  if (!value) return "Pendente";
+  const normalized = value.replace(/-/g, "_").toLowerCase();
+  const map: Record<string, DocValidationStatus> = {
+    pendente: "Pendente",
+    pending: "Pendente",
+    validado: "Validado",
+    validated: "Validado",
+    rejeitado: "Rejeitado",
+    rejected: "Rejeitado",
+    nao_validado: "Nao_Validado",
+    'nao validado': "Nao_Validado",
+    'não_validado': "Nao_Validado",
+    'não validado': "Nao_Validado",
+    not_validated: "Nao_Validado",
+    inconsistente: "Inconsistente",
+    inconsistent: "Inconsistente",
+  };
+  if (map[normalized]) return map[normalized];
+  if (DOC_STATUS_OPTIONS.includes(value as DocValidationStatus)) return value as DocValidationStatus;
+  return "Pendente";
+};
+
+const extractErrorMessages = (errors: FieldErrors<PatientPersonalDTO>): string[] => {
+  const messages: string[] = [];
+  const visit = (value: unknown) => {
+    if (!value) return;
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (typeof value === "object") {
+      const maybeError = value as { message?: unknown };
+      if (typeof maybeError.message === "string") {
+        messages.push(maybeError.message);
+      }
+      Object.values(value).forEach((child) => {
+        if (child && typeof child === "object" && child !== value) visit(child);
+      });
+    }
+  };
+  visit(errors);
+  return Array.from(new Set(messages));
+};
 
 export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
   const calculateAge = (date?: Date) => {
@@ -31,7 +87,6 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
       patient_id: patient.id,
       full_name: patient.full_name ?? "",
       nickname: patient.nickname ?? "",
-      display_name: patient.display_name ?? "",
       social_name: patient.social_name ?? "",
       salutation: patient.salutation ?? "",
       gender_identity: (patient.gender_identity as any) ?? "Prefiro nao informar",
@@ -48,9 +103,9 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
       national_id: patient.national_id ?? "",
       doc_validation_source: (patient as any).doc_validation_source ?? "",
       document_validation_method: patient.document_validation_method ?? "manual",
-      doc_validation_status: (patient.doc_validation_status as any) ?? "Pendente",
+      doc_validation_status: normalizeDocValidationStatus(patient.doc_validation_status),
       doc_validated_at: patient.doc_validated_at ?? undefined,
-      doc_validated_by: patient.doc_validated_by ?? "",
+      doc_validated_by: patient.doc_validated_by ?? undefined,
       date_of_birth: patient.date_of_birth ? new Date(patient.date_of_birth) : undefined,
       gender: (() => {
         if (patient.gender === "M") return "Masculino";
@@ -102,19 +157,46 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
   const consentHistoryText = (patient as any).marketing_consent_history || "";
 
   const [isForeignDoc, setIsForeignDoc] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  async function onSubmit(data: PatientPersonalDTO) {
-    const res = await upsertPersonalAction(data);
-    if (res.success) toast.success("Dados pessoais atualizados!");
-    else toast.error(res.error);
-  }
+  const errorMessages = useMemo(() => extractErrorMessages(form.formState.errors), [form.formState.errors]);
+
+  const onSubmit = async (data: PatientPersonalDTO) => {
+    setSubmitError(null);
+    setIsSaving(true);
+    try {
+      const res = await upsertPersonalAction(data);
+      if (res.success) {
+        toast.success("Dados pessoais atualizados!");
+        form.reset(data);
+      } else {
+        setSubmitError(res.error || "Erro ao salvar os dados pessoais.");
+        toast.error(res.error || "Erro ao salvar os dados pessoais.");
+      }
+    } catch (error) {
+      console.error("upsertPersonalAction", error);
+      setSubmitError("Erro inesperado ao salvar os dados pessoais.");
+      toast.error("Erro inesperado ao salvar os dados pessoais.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSubmit = form.handleSubmit(onSubmit, (errors) => {
+    const messages = extractErrorMessages(errors);
+    const message = messages[0] || "Revise os campos destacados e tente novamente.";
+    setSubmitError(message);
+    toast.error("Não foi possível salvar", { description: message });
+    console.warn("TabPersonal validation errors", errors);
+  });
 
   const labelCls = "text-[11px] font-semibold text-slate-600 uppercase";
   const inputCls = "h-9 text-sm bg-white";
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-10">
+      <form onSubmit={handleSubmit} className="space-y-6 pb-10">
         <Card className="shadow-fluent border-slate-200">
           <CardHeader>
             <CardTitle className="text-base text-[#0F2B45]">Identidade Civil & Social</CardTitle>
@@ -341,6 +423,7 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
               <FormItem className="md:col-span-4 col-span-12">
                 <FormLabel className={labelCls}>CPF</FormLabel>
                 <FormControl><Input {...field} className={inputCls} /></FormControl>
+                <FormMessage />
               </FormItem>
             )}/>
             <FormField control={form.control} name="cpf_status_label" render={({ field }) => (
@@ -576,9 +659,19 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
                 </FormItem>
               )}/>
               <FormField control={form.control} name="photo_consent_date" render={({ field }) => (
-                <FormItem className="flex items-center space-x-2">
-                  <FormLabel className={labelCls}>Data Consent. Imagem</FormLabel>
-                  <FormControl><Input type="date" value={field.value ? format(field.value, "yyyy-MM-dd") : ""} onChange={(e)=>field.onChange(e.target.value ? new Date(e.target.value):undefined)} className={inputCls} /></FormControl>
+                <FormItem className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <FormLabel className={labelCls}>Data Consent. Imagem</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        value={field.value ? format(new Date(field.value), "yyyy-MM-dd") : ""}
+                        onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                        className={inputCls}
+                      />
+                    </FormControl>
+                  </div>
+                  <FormMessage />
                 </FormItem>
               )}/>
             </div>
@@ -606,6 +699,23 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
             </div>
           </CardContent>
         </Card>
+
+        {(submitError || (form.formState.isSubmitted && errorMessages.length > 0)) && (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <WarningCircle className="mt-0.5 h-4 w-4" />
+            <div>
+              <p className="font-semibold">Não foi possível salvar.</p>
+              <p>{submitError || "Revise os campos destacados abaixo."}</p>
+              {errorMessages.length > 0 && (
+                <ul className="mt-2 list-disc pl-4 text-xs">
+                  {errorMessages.slice(0, 4).map((message, idx) => (
+                    <li key={idx}>{message}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
 
         <Card className="shadow-fluent border-slate-200">
           <CardHeader>
@@ -649,7 +759,9 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
         </Card>
 
         <div className="flex justify-end">
-          <Button type="submit" className="bg-[#0F2B45] text-white px-6">Salvar Alterações</Button>
+          <Button type="submit" disabled={isSaving} className="bg-[#0F2B45] text-white px-6">
+            {isSaving ? "Salvando..." : "Salvar Alterações"}
+          </Button>
         </div>
       </form>
     </Form>
