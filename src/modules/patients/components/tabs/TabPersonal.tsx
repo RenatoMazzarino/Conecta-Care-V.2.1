@@ -3,7 +3,7 @@
 import { useFieldArray, useForm, type FieldErrors } from "react-hook-form";
 import { useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PatientPersonalSchema, PatientPersonalDTO } from "@/data/definitions/personal";
+import { PatientPersonalSchema, PatientPersonalDTO, RACE_COLOR_OPTIONS, type RaceColor } from "@/data/definitions/personal";
 import { upsertPersonalAction } from "../../actions.upsertPersonal";
 import { FullPatientDetails } from "../../patient.data";
 import { Button } from "@/components/ui/button";
@@ -20,35 +20,87 @@ import { format } from "date-fns";
 
 const DOC_STATUS_OPTIONS = [
   "Pendente",
+  "Nao Validado",
   "Validado",
-  "Rejeitado",
-  "Nao_Validado",
   "Inconsistente",
+  "Em Analise",
 ] as const;
 
 type DocValidationStatus = (typeof DOC_STATUS_OPTIONS)[number];
 
 const normalizeDocValidationStatus = (value?: string | null): DocValidationStatus => {
   if (!value) return "Pendente";
-  const normalized = value.replace(/-/g, "_").toLowerCase();
+  const normalized = value.replace(/[_-]/g, " ").toLowerCase();
   const map: Record<string, DocValidationStatus> = {
     pendente: "Pendente",
     pending: "Pendente",
+    'nao validado': "Nao Validado",
+    'não validado': "Nao Validado",
+    nao_validado: "Nao Validado",
+    not_validated: "Nao Validado",
     validado: "Validado",
     validated: "Validado",
-    rejeitado: "Rejeitado",
-    rejected: "Rejeitado",
-    nao_validado: "Nao_Validado",
-    'nao validado': "Nao_Validado",
-    'não_validado': "Nao_Validado",
-    'não validado': "Nao_Validado",
-    not_validated: "Nao_Validado",
     inconsistente: "Inconsistente",
     inconsistent: "Inconsistente",
+    rejeitado: "Inconsistente",
+    rejected: "Inconsistente",
+    reprovado: "Inconsistente",
+    'em analise': "Em Analise",
+    'em análise': "Em Analise",
+    analysing: "Em Analise",
   };
   if (map[normalized]) return map[normalized];
   if (DOC_STATUS_OPTIONS.includes(value as DocValidationStatus)) return value as DocValidationStatus;
   return "Pendente";
+};
+
+type PreferredContactMethod = "whatsapp" | "phone" | "email";
+
+const normalizePrefContactMethod = (value?: string | null): PreferredContactMethod => {
+  if (value === "email") return "email";
+  if (value === "phone" || value === "sms") return "phone";
+  return "whatsapp";
+};
+
+const DEFAULT_RACE_COLOR: RaceColor = "Nao declarado";
+
+const RACE_COLOR_LABELS: Record<RaceColor, string> = {
+  Branca: "Branca",
+  Preta: "Preta",
+  Parda: "Parda",
+  Amarela: "Amarela",
+  Indigena: "Indígena",
+  "Nao declarado": "Não declarado",
+};
+
+const normalizeRaceColor = (value?: string | null): RaceColor => {
+  if (!value) return DEFAULT_RACE_COLOR;
+  const sanitized = value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
+  const map: Record<string, RaceColor> = {
+    branca: "Branca",
+    preta: "Preta",
+    parda: "Parda",
+    amarela: "Amarela",
+    indigena: "Indigena",
+    "nao declarado": "Nao declarado",
+  };
+
+  if (map[sanitized]) return map[sanitized];
+
+  if (RACE_COLOR_OPTIONS.includes(value as RaceColor)) {
+    return value as RaceColor;
+  }
+
+  const normalizedByOption = RACE_COLOR_OPTIONS.find((option) => option.toLowerCase() === sanitized);
+  if (normalizedByOption) return normalizedByOption;
+
+  return DEFAULT_RACE_COLOR;
 };
 
 const extractErrorMessages = (errors: FieldErrors<PatientPersonalDTO>): string[] => {
@@ -91,9 +143,8 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
       salutation: patient.salutation ?? "",
       gender_identity: (patient.gender_identity as any) ?? "Prefiro nao informar",
       pronouns: (patient.pronouns as any) ?? "Outro",
-      marital_status: patient.civil_status as any,
+      civil_status: (patient.civil_status as any) ?? "Solteiro(a)",
       cpf: patient.cpf ?? "",
-      cpf_status_label: (patient as any).cpf_status_label ?? "",
       cpf_status: patient.cpf_status ?? "valid",
       rg: patient.rg ?? "",
       rg_issuer: patient.rg_issuer ?? "",
@@ -125,13 +176,13 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
       mobile_phone: patient.mobile_phone ?? "",
       secondary_phone: patient.secondary_phone ?? "",
       email: patient.email ?? "",
-      pref_contact_method: (patient.pref_contact_method as PatientPersonalDTO['pref_contact_method']) ?? "whatsapp",
+      pref_contact_method: normalizePrefContactMethod(patient.pref_contact_method),
       accept_sms: patient.accept_sms ?? true,
       accept_email: patient.accept_email ?? true,
       block_marketing: patient.block_marketing ?? false,
       education_level: (patient.education_level as any) ?? "Nao Informado",
       profession: patient.profession ?? "",
-      race_color: (patient.race_color as any) ?? "Não declarado",
+      race_color: normalizeRaceColor(patient.race_color),
       is_pcd: patient.is_pcd ?? false,
       contact_time_preference: (patient.contact_time_preference as any) ?? "Comercial",
       contact_notes: patient.contact_notes ?? "",
@@ -155,6 +206,7 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
   const hasConsentDefined = watchConsentStatus === "accepted" || watchConsentStatus === "rejected";
   const [forceConsentEdit, setForceConsentEdit] = useState(false);
   const consentHistoryText = (patient as any).marketing_consent_history || "";
+  const docStatusLabel = normalizeDocValidationStatus(patient.doc_validation_status);
 
   const [isForeignDoc, setIsForeignDoc] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -166,10 +218,16 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
     setSubmitError(null);
     setIsSaving(true);
     try {
-      const res = await upsertPersonalAction(data);
+      const payload: PatientPersonalDTO = {
+        ...data,
+        doc_validation_status: normalizeDocValidationStatus(data.doc_validation_status),
+        pref_contact_method: normalizePrefContactMethod(data.pref_contact_method),
+        race_color: normalizeRaceColor(data.race_color)
+      };
+      const res = await upsertPersonalAction(payload);
       if (res.success) {
         toast.success("Dados pessoais atualizados!");
-        form.reset(data);
+        form.reset({ ...data, race_color: payload.race_color });
       } else {
         setSubmitError(res.error || "Erro ao salvar os dados pessoais.");
         toast.error(res.error || "Erro ao salvar os dados pessoais.");
@@ -292,10 +350,13 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
                 <FormMessage />
               </FormItem>
             )}/>
-            <FormField control={form.control} name="marital_status" render={({ field }) => (
+            <FormField control={form.control} name="civil_status" render={({ field }) => (
               <FormItem className="md:col-span-4 col-span-12">
                 <FormLabel className={labelCls}>Estado Civil</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  value={(field.value as PatientPersonalDTO["civil_status"]) ?? "Solteiro(a)"}
+                >
                   <FormControl><SelectTrigger className={inputCls}><SelectValue /></SelectTrigger></FormControl>
                   <SelectContent>
                     <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
@@ -335,15 +396,14 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
             <FormField control={form.control} name="race_color" render={({ field }) => (
               <FormItem className="md:col-span-4 col-span-12">
                 <FormLabel className={labelCls}>Raça/Cor</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value ?? DEFAULT_RACE_COLOR}>
                   <FormControl><SelectTrigger className={inputCls}><SelectValue /></SelectTrigger></FormControl>
                   <SelectContent>
-                    <SelectItem value="Branca">Branca</SelectItem>
-                    <SelectItem value="Preta">Preta</SelectItem>
-                    <SelectItem value="Parda">Parda</SelectItem>
-                    <SelectItem value="Amarela">Amarela</SelectItem>
-                    <SelectItem value="Indígena">Indígena</SelectItem>
-                    <SelectItem value="Não declarado">Não declarado</SelectItem>
+                    {RACE_COLOR_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {RACE_COLOR_LABELS[option]}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </FormItem>
@@ -426,22 +486,6 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
                 <FormMessage />
               </FormItem>
             )}/>
-            <FormField control={form.control} name="cpf_status_label" render={({ field }) => (
-              <FormItem className="md:col-span-4 col-span-12">
-                <FormLabel className={labelCls}>Status CPF</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl><SelectTrigger className={inputCls}><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    <SelectItem value="Regular">Regular</SelectItem>
-                    <SelectItem value="Pendente de Regularizacao">Pendente de Regularização</SelectItem>
-                    <SelectItem value="Suspenso">Suspenso</SelectItem>
-                    <SelectItem value="Cancelado">Cancelado</SelectItem>
-                    <SelectItem value="Titular Falecido">Titular Falecido</SelectItem>
-                    <SelectItem value="Nulo">Nulo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormItem>
-            )}/>
             <FormField control={form.control} name="rg" render={({ field }) => (
               <FormItem className="md:col-span-4 col-span-12">
                 <FormLabel className={labelCls}>RG</FormLabel>
@@ -475,7 +519,7 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
               </FormItem>
             )}/>
             <div className="md:col-span-4 col-span-12 text-sm text-slate-600">
-              <p>Status: <span className="font-semibold">{patient.doc_validation_status || "Pendente"}</span></p>
+              <p>Status: <span className="font-semibold">{docStatusLabel}</span></p>
               {(patient as any).doc_validation_source && <p className="text-xs text-slate-500">Origem: {(patient as any).doc_validation_source}</p>}
               {patient.doc_validated_by && patient.doc_validated_at && (
                 <p className="text-xs text-slate-500">Validado por {patient.doc_validated_by} em {patient.doc_validated_at}</p>
@@ -590,14 +634,12 @@ export function TabPersonal({ patient }: { patient: FullPatientDetails }) {
             <FormField control={form.control} name="pref_contact_method" render={({ field }) => (
               <FormItem className="md:col-span-6 col-span-12">
                 <FormLabel className={labelCls}>Preferência</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value ?? "whatsapp"}>
                   <FormControl><SelectTrigger className={inputCls}><SelectValue /></SelectTrigger></FormControl>
                   <SelectContent>
                     <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                    <SelectItem value="phone">Telefone</SelectItem>
-                    <SelectItem value="sms">SMS</SelectItem>
+                    <SelectItem value="phone">Telefone / SMS</SelectItem>
                     <SelectItem value="email">E-mail</SelectItem>
-                    <SelectItem value="other">Outro</SelectItem>
                   </SelectContent>
                 </Select>
               </FormItem>

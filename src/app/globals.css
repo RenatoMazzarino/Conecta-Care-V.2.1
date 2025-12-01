@@ -111,3 +111,20 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+[data-patient-mode='readonly'] input,
+[data-patient-mode='readonly'] textarea,
+[data-patient-mode='readonly'] select,
+[data-patient-mode='readonly'] button,
+[data-patient-mode='readonly'] [role='switch'],
+[data-patient-mode='readonly'] [role='checkbox'],
+[data-patient-mode='readonly'] [role='radio'] {
+  pointer-events: none !important;
+}
+
+[data-patient-mode='readonly'] input,
+[data-patient-mode='readonly'] textarea,
+[data-patient-mode='readonly'] select {
+  color: hsl(var(--foreground));
+  opacity: 0.85;
+}

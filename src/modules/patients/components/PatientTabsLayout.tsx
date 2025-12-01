@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { FullPatientDetails } from "../patient.data";
 import { cn } from "@/lib/utils";
 
@@ -13,10 +14,12 @@ import { TabAdministrative } from "./tabs/TabAdministrative";
 import { TabFinancial } from "./tabs/TabFinancial";
 import { TabHistory } from "./tabs/TabHistory";
 import { BusinessProcessFlow, BPF_STEPS } from "@/components/patients/v2/business-process-flow";
-import * as React from "react";
 import { WarningCircle } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useGedPanel } from "@/components/ged/ged-panel-provider";
+import { PatientHeader } from "@/components/patients/v2/patient-header";
+import type { PatientHeaderData } from "@/app/(app)/patients/[patientId]/actions.getHeader";
+import { PatientEditModeProvider } from "./edit-mode-context";
 
 const tabs = [
   { id: "general", label: "Visão Geral" },
@@ -30,15 +33,33 @@ const tabs = [
   { id: "history", label: "Histórico" },
 ];
 
-export function PatientTabsLayout({ patient, embedded = false }: { patient: FullPatientDetails; embedded?: boolean }) {
+type PatientTabsLayoutProps = {
+  patient: FullPatientDetails;
+  embedded?: boolean;
+  headerData?: PatientHeaderData | null;
+};
+
+export function PatientTabsLayout({ patient, embedded = false, headerData }: PatientTabsLayoutProps) {
   const isAdmissionFlow = patient.record_status === "onboarding" || patient.record_status === "draft";
-  const [activeTab, setActiveTab] = React.useState(isAdmissionFlow ? "personal" : "general");
-  const [localCompleted, setLocalCompleted] = React.useState<string[]>([]);
-  const [warnings, setWarnings] = React.useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState(isAdmissionFlow ? "personal" : "general");
+  const [localCompleted, setLocalCompleted] = useState<string[]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
   const { openGedPanel } = useGedPanel();
+
+  const editModeValue = useMemo(
+    () => ({
+      isEditing,
+      enableEdit: () => setIsEditing(true),
+      disableEdit: () => setIsEditing(false),
+      toggleEdit: () => setIsEditing((prev) => !prev),
+    }),
+    [isEditing],
+  );
 
   const contentWrapper = embedded ? "bg-[#faf9f8] pt-6" : "bg-[#faf9f8] min-h-screen py-8 px-6";
   const innerSpacing = embedded ? "max-w-[1600px] mx-auto px-8" : "max-w-[1600px] mx-auto";
+  const readonlyNotice = !isEditing;
 
   const completedSteps = [
     ...(patient.full_name ? ["personal"] : []),
@@ -119,7 +140,14 @@ export function PatientTabsLayout({ patient, embedded = false }: { patient: Full
   };
 
   return (
-    <>
+    <PatientEditModeProvider value={editModeValue}>
+      <PatientHeader
+        patientId={patient.id}
+        fallbackPatient={patient}
+        headerData={headerData}
+        isEditing={isEditing}
+        onToggleEdit={editModeValue.toggleEdit}
+      />
       {isAdmissionFlow && (
         <div className="mb-4 px-6">
           <BusinessProcessFlow
@@ -164,7 +192,10 @@ export function PatientTabsLayout({ patient, embedded = false }: { patient: Full
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setWarnings([]);
+              }}
               className={cn(
                 "pb-3 pt-2 text-sm font-semibold transition-all border-b-2 shrink-0 flex items-center gap-2",
                 activeTab === tab.id
@@ -181,8 +212,20 @@ export function PatientTabsLayout({ patient, embedded = false }: { patient: Full
         </div>
       </div>
 
+      {readonlyNotice && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 px-6 py-3 flex items-center justify-between text-sm">
+          <div className="font-medium">Ficha em modo leitura. Clique em "Editar paciente" para habilitar alterações.</div>
+          <Button size="sm" variant="secondary" onClick={editModeValue.enableEdit}>
+            Ativar edição
+          </Button>
+        </div>
+      )}
+
       <div className={contentWrapper}>
-        <div className={innerSpacing}>
+        <div
+          className={innerSpacing}
+          data-patient-mode={isEditing ? "edit" : "readonly"}
+        >
           {activeTab === "general" && <TabGeneral patient={patient} />}
           {activeTab === "personal" && <TabPersonal patient={patient} />}
           {activeTab === "address" && <TabAddress patient={patient} />}
@@ -194,6 +237,6 @@ export function PatientTabsLayout({ patient, embedded = false }: { patient: Full
           {activeTab === "history" && <TabHistory patient={patient} />}
         </div>
       </div>
-    </>
+    </PatientEditModeProvider>
   );
 }

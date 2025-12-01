@@ -1151,7 +1151,6 @@ CREATE TABLE public.patients (
   marketing_consented_at timestamp with time zone,
   marketing_consent_source text CHECK (CHECK ((marketing_consent_source = ANY (ARRAY['Portal Administrativo (Edicao Manual)'::text, 'Formulario Web'::text, 'Assinatura Digital'::text, 'Importacao de Legado'::text, 'Solicitacao Verbal'::text])) OR marketing_consent_source IS NULL)),
   marketing_consent_ip inet,
-  marital_status text,
   father_name text,
   photo_consent_date timestamp with time zone,
   doc_validation_source text,

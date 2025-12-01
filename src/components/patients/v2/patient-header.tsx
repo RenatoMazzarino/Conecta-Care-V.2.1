@@ -7,7 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { WarningCircle, FloppyDisk, Printer, ShareNetwork, Prohibit, DotsThree, FolderSimple } from "@phosphor-icons/react";
+import {
+  WarningCircle,
+  FloppyDisk,
+  Printer,
+  ShareNetwork,
+  Prohibit,
+  DotsThree,
+  FolderSimple,
+  PencilSimpleLine,
+  LockSimple,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { GedTriggerButton } from "@/components/ged/GedTriggerButton";
 import { toast } from "sonner";
@@ -18,6 +28,8 @@ type Props = {
   headerData?: PatientHeaderData | null;
   onTabChange?: (tab: string) => void;
   breadcrumbs?: React.ReactNode;
+  isEditing?: boolean;
+  onToggleEdit?: () => void;
 };
 
 const statusColor = (status?: string) => {
@@ -68,7 +80,7 @@ function deriveFromPatient(patient?: FullPatientDetails | null): PatientHeaderDa
   };
 }
 
-export function PatientHeader({ headerData, fallbackPatient, onTabChange }: Props) {
+export function PatientHeader({ headerData, fallbackPatient, onTabChange, isEditing, onToggleEdit }: Props) {
   const data = headerData || deriveFromPatient(fallbackPatient);
   const loading = !data;
 
@@ -109,6 +121,17 @@ export function PatientHeader({ headerData, fallbackPatient, onTabChange }: Prop
       <div className="px-8 pt-4 pb-2 max-w-[1600px] mx-auto">
         <div className="flex items-center justify-between mb-3 text-sm text-slate-600">
           <div className="flex items-center gap-4">
+            {typeof isEditing === "boolean" && onToggleEdit && (
+              <Button
+                variant={isEditing ? "default" : "secondary"}
+                size="sm"
+                className="gap-2"
+                onClick={onToggleEdit}
+              >
+                {isEditing ? <LockSimple size={16} /> : <PencilSimpleLine size={16} />}
+                {isEditing ? "Encerrar edição" : "Editar paciente"}
+              </Button>
+            )}
             <Button variant="ghost" size="sm" className="gap-2" onClick={() => handleUnavailableAction("Salvar e Fechar")}>
               <FloppyDisk size={16} weight="bold" /> Salvar e Fechar
             </Button>

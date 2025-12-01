@@ -1,6 +1,8 @@
-"use server";
+'use server';
 
-import { upsertAddressAction } from "@/modules/patients/actions.upsertAddress";
+import { upsertAddressAction, type UpsertAddressResult } from '@/modules/patients/actions.upsertAddress';
+import type { PatientAddressForm } from '@/schemas/patient.address';
 
-// Wrapper para manter compatibilidade de importação
-export { upsertAddressAction as upsertAddress };
+export async function upsertAddress(data: PatientAddressForm): Promise<UpsertAddressResult> {
+	return upsertAddressAction(data);
+}

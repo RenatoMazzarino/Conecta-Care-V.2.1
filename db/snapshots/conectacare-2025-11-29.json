@@ -7920,15 +7920,6 @@
           }
         },
         {
-          "name": "marital_status",
-          "type": "text",
-          "nullable": true,
-          "stats": {
-            "nulls": 1,
-            "cardinality": 0
-          }
-        },
-        {
           "name": "father_name",
           "type": "text",
           "nullable": true,

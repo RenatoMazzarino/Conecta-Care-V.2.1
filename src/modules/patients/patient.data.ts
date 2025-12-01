@@ -6,6 +6,15 @@ import { EmergencyContactDTO } from "@/data/definitions/team";
 import { PatientAdministrativeDTO } from "@/data/definitions/administrative";
 import { PatientInventoryDTO } from "@/data/definitions/inventory";
 import { PatientDocumentDTO } from "@/data/definitions/documents";
+import type {
+  AmbulanceAccessValue,
+  AnimalBehaviorValue,
+  BedTypeValue,
+  MattressTypeValue,
+  NightAccessRiskValue,
+  WaterSourceValue,
+  ZoneTypeValue,
+} from "@/data/definitions/address";
 
 // --- DEFINIÇÕES DE TIPOS AUXILIARES ---
 
@@ -18,34 +27,34 @@ export type PatientAddressRecord = {
   city?: string | null;
   state?: string | null;
   reference_point?: string | null;
-  zone_type?: "Urbana" | "Rural" | "Comunidade" | "Risco" | null;
+  zone_type?: ZoneTypeValue | null;
   travel_notes?: string | null;
   allowed_visit_hours?: string | null;
   facade_image_url?: string | null;
   eta_minutes?: number | null;
-  geo_lat?: number | null;
-  geo_lng?: number | null;
+  geo_latitude?: number | null;
+  geo_longitude?: number | null;
 };
 
 export type PatientDomicileRecord = {
-  ambulance_access?: string | null;
+  ambulance_access?: AmbulanceAccessValue | null;
   team_parking?: string | null;
-  night_access_risk?: "Baixo" | "Médio" | "Alto" | null;
+  night_access_risk?: NightAccessRiskValue | null;
   gate_identification?: string | null;
   entry_procedure?: string | null;
   ventilation?: string | null;
   lighting_quality?: string | null;
   noise_level?: string | null;
-  bed_type?: string | null;
-  mattress_type?: string | null;
+  bed_type?: BedTypeValue | null;
+  mattress_type?: MattressTypeValue | null;
   voltage?: string | null;
   backup_power_source?: string | null;
-  water_source?: string | null;
+  water_source?: WaterSourceValue | null;
   has_wifi?: boolean | null;
   has_smokers?: boolean | null;
   hygiene_conditions?: string | null;
   pets_description?: string | null;
-  animals_behavior?: string | null;
+  animals_behavior?: AnimalBehaviorValue | null;
   general_observations?: string | null;
   pets?: any;
 };
@@ -237,8 +246,8 @@ export type FullPatientDetails = {
 
 type PatientListItem = Pick<
   FullPatientDetails,
-  "id" | "full_name" | "cpf" | "gender" | "date_of_birth" | "status" | "created_at"
->;
+  "id" | "full_name" | "cpf" | "gender" | "date_of_birth" | "record_status" | "created_at"
+> & { status?: string | null };
 
 // --- TIPO PARA A LISTAGEM (DATA GRID) ---
 export type PatientGridItem = {
@@ -299,7 +308,7 @@ type GridPatientRow = {
   social_name?: string | null;
   date_of_birth?: string | null;
   gender?: string | null;
-  status?: string | null;
+  record_status?: string | null;
   address?: PatientAddressRecord[];
   clinical?: Array<{
     complexity_level?: "low" | "medium" | "high" | "critical" | null;
@@ -328,7 +337,7 @@ export async function getPatients(): Promise<PatientListItem[]> {
       cpf,
       gender,
       date_of_birth,
-      status:record_status, 
+      record_status,
       onboarding_step,
       nickname,
       education_level,
@@ -362,7 +371,10 @@ export async function getPatients(): Promise<PatientListItem[]> {
     return [];
   }
 
-  return patients ?? [];
+  return (patients ?? []).map((patient) => ({
+    ...patient,
+    status: (patient as any).record_status ?? null,
+  }));
 }
 
 // Busca paginada com joins para grid
@@ -402,8 +414,7 @@ export async function getPatientsPaginated(params: GetPatientsParams = {}) {
   let query = supabase
     .from("patients")
     .select(`
-      id, full_name, social_name, date_of_birth, status:record_status, gender, onboarding_step,
-      record_status:record_status,
+      id, full_name, social_name, date_of_birth, record_status, gender, onboarding_step,
       contractor:contractors(id, name),
       address:patient_addresses(city, neighborhood, zone_type),
       clinical:patient_clinical_profiles(complexity_level, diagnosis_main, clinical_tags, risk_braden, risk_morse, oxygen_usage),
@@ -508,6 +519,7 @@ export async function getPatientsPaginated(params: GetPatientsParams = {}) {
   const formatted: PatientGridItem[] = (data || []).map((p: GridPatientRow) => {
     const birth = p.date_of_birth ? new Date(p.date_of_birth) : null;
     const age = birth ? now.getFullYear() - birth.getFullYear() - (now < addDays(new Date(now.getFullYear(), birth.getMonth(), birth.getDate()), 0) ? 1 : 0) : null;
+    const recordStatus = p.record_status || 'active';
 
     // Próximo plantão simples: menor start_time futuro na lista (já que não ordenamos no select)
     const futureShifts = (p.shifts || []).filter((s) => new Date(s.start_time) >= now);
@@ -527,7 +539,7 @@ export async function getPatientsPaginated(params: GetPatientsParams = {}) {
       age,
       gender: p.gender ?? null,
       city: p.address?.[0]?.city || 'Local não inf.',
-      status: p.status || 'active',
+      status: recordStatus,
       complexity_level: p.clinical?.[0]?.complexity_level || null,
       diagnosis_main: p.clinical?.[0]?.diagnosis_main,
       contractor_name: p.contractor?.[0]?.name || 'Particular',
@@ -795,7 +807,7 @@ export async function getPatientDetails(patientId: string): Promise<FullPatientD
     consumables: consumablesRes?.data || [],
     movements: movementsRes?.data || [],
     legal_guardian_summary: legalGuardianViewRes?.data || null,
-    status: (patientRow as any)?.status ?? (patientRow as any)?.record_status ?? null,
+    status: (patientRow as any)?.record_status ?? null,
     civil_documents: civilDocs,
     related_persons: relatedPersons,
     team: teamMembers,

@@ -1,8 +1,39 @@
 'use server'
 
 import { createClient } from "@/lib/supabase/server";
-import { PatientPersonalSchema, PatientPersonalDTO } from "@/data/definitions/personal";
+import { PatientPersonalSchema, PatientPersonalDTO, MARKETING_CONSENT_SOURCES, MarketingConsentSource } from "@/data/definitions/personal";
 import { revalidatePath } from "next/cache";
+
+const MARKETING_CONSENT_SOURCE_DEFAULT: MarketingConsentSource = MARKETING_CONSENT_SOURCES[0];
+
+const MIRRORED_PERSONAL_FIELDS: Array<[keyof PatientPersonalDTO | string, string]> = [
+  ["document_validation_method", "doc_validation_method"],
+];
+
+const sanitizeSource = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
+const normalizeMarketingConsentSource = (value?: string | null): MarketingConsentSource => {
+  if (!value) return MARKETING_CONSENT_SOURCE_DEFAULT;
+  const sanitized = sanitizeSource(value);
+  const match = MARKETING_CONSENT_SOURCES.find((source) => sanitizeSource(source) === sanitized);
+  return match ?? MARKETING_CONSENT_SOURCE_DEFAULT;
+};
+
+const syncMirroredFields = (payload: Record<string, unknown>) => {
+  MIRRORED_PERSONAL_FIELDS.forEach(([primary, secondary]) => {
+    const value = payload[primary as string] ?? payload[secondary];
+    if (value !== undefined) {
+      payload[primary as string] = value;
+      payload[secondary] = value;
+    }
+  });
+};
 
 export async function upsertPersonalAction(data: PatientPersonalDTO) {
   const supabase = await createClient();
@@ -17,18 +48,10 @@ export async function upsertPersonalAction(data: PatientPersonalDTO) {
     civil_documents,
     marketing_consent_status,
     marketing_consent_history,
-    cpf_status_label: _cpf_status_label,
-    display_name: _display_name,
-    flag_email_accepted: _flag_email_accepted,
-    flag_sms_accepted: _flag_sms_accepted,
-    flag_whatsapp_accepted: _flag_whatsapp_accepted,
     ...updates
   } = parsed.data as PatientPersonalDTO & Record<string, unknown>;
-  void _cpf_status_label;
-  void _display_name;
-  void _flag_email_accepted;
-  void _flag_sms_accepted;
-  void _flag_whatsapp_accepted;
+
+  syncMirroredFields(updates);
 
   // Rastreio de consentimento: se flags ou status mudarem, registrar histórico
   try {
@@ -48,7 +71,11 @@ export async function upsertPersonalAction(data: PatientPersonalDTO) {
     if (changedFlags) {
       const nowIso = new Date().toISOString();
       updates.marketing_consented_at = nowIso as any;
-      updates.marketing_consent_source = marketing_consent_history ? marketing_consent_history : "Portal Administrativo (Edição Manual)";
+      const sourceCandidate =
+        (updates as PatientPersonalDTO).marketing_consent_source ??
+        current?.marketing_consent_source ??
+        MARKETING_CONSENT_SOURCE_DEFAULT;
+      updates.marketing_consent_source = normalizeMarketingConsentSource(sourceCandidate);
       const statusText = marketing_consent_status === "accepted" ? "Aceito" : marketing_consent_status === "rejected" ? "Recusado" : "Pendente";
       const entry = `${statusText} em ${new Date().toLocaleDateString()}`;
       (updates as any).marketing_consent_history = [current?.marketing_consent_history, entry].filter(Boolean).join("; ");

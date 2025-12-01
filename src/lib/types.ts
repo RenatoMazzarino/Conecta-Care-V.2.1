@@ -1,5 +1,23 @@
 // Tipagens globais auxiliares
 
+import type {
+  AmbulanceAccessValue,
+  AnimalBehaviorValue,
+  BackupPowerValue,
+  BedTypeValue,
+  CellSignalQualityValue,
+  ElectricInfraValue,
+  ElevatorStatusValue,
+  EquipmentSpaceValue,
+  MattressTypeValue,
+  NightAccessRiskValue,
+  PropertyTypeValue,
+  StreetAccessTypeValue,
+  WaterSourceValue,
+  WheelchairAccessValue,
+  ZoneTypeValue,
+} from "@/data/definitions/address";
+
 export type Patient = {
   id: string;
   full_name?: string | null;
@@ -50,51 +68,51 @@ export type PatientAddress = {
   city?: string | null;
   state?: string | null;
   referencePoint?: string | null;
-  zoneType?: string | null;
+  zoneType?: ZoneTypeValue | null;
   travelNotes?: string | null;
-  geoLat?: number | null;
-  geoLng?: number | null;
+  geoLatitude?: number | null;
+  geoLongitude?: number | null;
 
-  propertyType?: 'Casa' | 'Apartamento' | 'Chácara/Sítio' | 'ILPI' | 'Pensão' | 'Outro' | null;
+  propertyType?: PropertyTypeValue | null;
   condoName?: string | null;
   blockTower?: string | null;
   floorNumber?: number | null;
   unitNumber?: string | null;
 
-  ambulanceAccess?: string | null;
-  streetAccessType?: 'Rua Larga' | 'Rua Estreita' | 'Rua sem Saída' | 'Viela' | 'Estrada de Terra' | null;
+  ambulanceAccess?: AmbulanceAccessValue | null;
+  streetAccessType?: StreetAccessTypeValue | null;
   parking?: string | null;
   teamParking?: string | null;
-  elevatorStatus?: 'Não tem' | 'Tem - Não comporta maca' | 'Tem - Comporta maca' | null;
-  wheelchairAccess?: 'Livre' | 'Com restrição' | 'Incompatível' | null;
+  elevatorStatus?: ElevatorStatusValue | null;
+  wheelchairAccess?: WheelchairAccessValue | null;
   externalStairs?: string | null;
 
   has24hConcierge?: boolean | null;
   conciergeContact?: string | null;
   entryProcedure?: string | null;
-  nightAccessRisk?: 'Baixo' | 'Médio' | 'Alto' | null;
+  nightAccessRisk?: NightAccessRiskValue | null;
   areaRiskType?: 'Baixo' | 'Médio' | 'Alto' | null;
   worksOrObstacles?: string | null;
 
   hasWifi?: boolean | null;
   hasSmokers?: boolean | null;
-  electricInfra?: '110v' | '220v' | 'Bivolt' | 'Instável' | null;
-  backupPower?: 'Nenhum' | 'Gerador' | 'Nobreak' | 'Rede Dupla' | null;
-  cellSignalQuality?: 'Bom' | 'Razoável' | 'Ruim' | 'Inexistente' | null;
+  electricInfra?: ElectricInfraValue | null;
+  backupPower?: BackupPowerValue | null;
+  cellSignalQuality?: CellSignalQualityValue | null;
   powerOutletsDesc?: string | null;
-  equipmentSpace?: 'Adequado' | 'Restrito' | 'Crítico' | null;
-  waterSource?: string | null;
+  equipmentSpace?: EquipmentSpaceValue | null;
+  waterSource?: WaterSourceValue | null;
   adaptedBathroom?: boolean | null;
   stayLocation?: string | null;
   pets?: any;
   notes?: string | null;
 
-  bedType?: string | null;
-  mattressType?: string | null;
+  bedType?: BedTypeValue | null;
+  mattressType?: MattressTypeValue | null;
   voltage?: string | null;
   backupPowerSource?: string | null;
   petsDescription?: string | null;
-  animalsBehavior?: string | null;
+  animalsBehavior?: AnimalBehaviorValue | null;
   generalObservations?: string | null;
 
   householdMembers?: PatientHouseholdMember[];

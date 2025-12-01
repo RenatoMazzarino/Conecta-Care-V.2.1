@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { getPatientDetails } from "@/modules/patients/patient.data";
 import { PatientTabsLayout } from "@/modules/patients/components/PatientTabsLayout";
-import { PatientHeader } from "@/components/patients/v2/patient-header";
 import { GedPanelProvider } from "@/components/ged/ged-panel-provider";
 import { getPatientHeaderData } from "./actions.getHeader";
 
@@ -31,10 +30,7 @@ export default async function PatientDetailsPage({ params }: { params: Promise<{
   return (
     <GedPanelProvider patientId={patient.id} patientInfo={gedPatientInfo}>
       <div className="min-h-screen bg-[#faf9f8]">
-        <PatientHeader patientId={patient.id} headerData={headerData} fallbackPatient={patient} />
-        <div className="bg-white px-0">
-          <PatientTabsLayout patient={patient} embedded />
-        </div>
+        <PatientTabsLayout patient={patient} embedded headerData={headerData} />
       </div>
     </GedPanelProvider>
   );

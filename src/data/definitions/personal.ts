@@ -1,5 +1,26 @@
 import { z } from "zod";
 
+export const MARKETING_CONSENT_SOURCES = [
+  "Portal Administrativo (Edicao Manual)",
+  "Formulario Web",
+  "Assinatura Digital",
+  "Importacao de Legado",
+  "Solicitacao Verbal"
+] as const;
+
+export type MarketingConsentSource = (typeof MARKETING_CONSENT_SOURCES)[number];
+
+export const RACE_COLOR_OPTIONS = [
+  "Branca",
+  "Preta",
+  "Parda",
+  "Amarela",
+  "Indigena",
+  "Nao declarado"
+] as const;
+
+export type RaceColor = (typeof RACE_COLOR_OPTIONS)[number];
+
 const CivilDocSchema = z.object({
   id: z.string().uuid().optional(),
   doc_type: z.string().min(1, "Tipo obrigatório"),
@@ -25,7 +46,6 @@ export const PatientPersonalSchema = z.object({
   pronouns: z.enum(["Ele/Dele", "Ela/Dela", "Elu/Delu", "Outro"]).optional(),
   gender_identity: z.enum(["Cisgenero", "Transgenero", "Nao Binario", "Outro", "Prefiro nao informar"]).optional(),
   civil_status: z.enum(["Solteiro(a)", "Casado(a)", "União estável", "Separado(a)", "Divorciado(a)", "Viúvo(a)"]).optional(),
-  marital_status: z.enum(["Solteiro(a)", "Casado(a)", "União estável", "Separado(a)", "Divorciado(a)", "Viúvo(a)"]).optional(),
   mother_name: z.string().optional(),
   father_name: z.string().optional(),
   nationality: z.string().default("Brasileira"),
@@ -47,7 +67,7 @@ export const PatientPersonalSchema = z.object({
     "Nao Informado"
   ]).optional(),
   profession: z.string().optional(),
-  race_color: z.enum(["Branca", "Preta", "Parda", "Amarela", "Indígena", "Não declarado"]).optional(),
+  race_color: z.enum(RACE_COLOR_OPTIONS).optional(),
   is_pcd: z.boolean().default(false),
   photo_consent: z.boolean().default(false),
   photo_consent_date: z.coerce.date().optional(),
@@ -55,14 +75,6 @@ export const PatientPersonalSchema = z.object({
   // Documentos
   cpf: z.string().min(11, "CPF obrigatório"),
   cpf_status: z.string().optional(),
-  cpf_status_label: z.enum([
-    "Regular",
-    "Pendente de Regularizacao",
-    "Suspenso",
-    "Cancelado",
-    "Titular Falecido",
-    "Nulo"
-  ]).optional(),
   rg: z.string().optional(),
   rg_issuer: z.string().optional(),
   rg_issuer_state: z.string().length(2).optional(),
@@ -70,7 +82,13 @@ export const PatientPersonalSchema = z.object({
   cns: z.string().optional(),
   national_id: z.string().optional(),
   document_validation_method: z.string().optional(),
-  doc_validation_status: z.enum(["Pendente", "Validado", "Rejeitado", "Nao_Validado", "Inconsistente"]).optional(),
+  doc_validation_status: z.enum([
+    "Pendente",
+    "Nao Validado",
+    "Validado",
+    "Inconsistente",
+    "Em Analise"
+  ]).optional(),
   doc_validated_at: z.string().datetime().optional(),
   doc_validated_by: z.string().uuid().optional(),
   doc_validation_source: z.string().optional(),
@@ -79,7 +97,7 @@ export const PatientPersonalSchema = z.object({
   mobile_phone: z.string().optional(),
   secondary_phone: z.string().optional(),
   email: z.string().email("E-mail inválido").optional().or(z.literal('')),
-  pref_contact_method: z.enum(["whatsapp", "phone", "sms", "email", "other"]).optional(),
+  pref_contact_method: z.enum(["whatsapp", "phone", "email"]).optional(),
   contact_time_preference: z.enum(["Manha", "Tarde", "Noite", "Comercial", "Qualquer Horario"]).optional(),
   contact_notes: z.string().max(255).optional(),
   
@@ -88,7 +106,7 @@ export const PatientPersonalSchema = z.object({
   accept_email: z.boolean().default(true),
   block_marketing: z.boolean().default(false),
   marketing_consented_at: z.string().datetime().optional(),
-  marketing_consent_source: z.string().optional(),
+  marketing_consent_source: z.enum(MARKETING_CONSENT_SOURCES).optional(),
   marketing_consent_ip: z.string().optional(),
   marketing_consent_status: z.enum(["pending", "accepted", "rejected"]).optional(),
   marketing_consent_history: z.string().optional(),

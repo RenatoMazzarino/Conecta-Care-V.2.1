@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PatientAddressZ, PatientAddressForm } from '@/schemas/patient.address';
@@ -17,75 +17,177 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MapPin, Truck, Shield, Lightning as Zap, FloppyDisk as Save } from '@phosphor-icons/react';
+import {
+  ambulanceAccessOptions,
+  animalBehaviorOptions,
+  backupPowerOptions,
+  bedTypeOptions,
+  cellSignalQualityOptions,
+  electricInfraOptions,
+  elevatorStatusOptions,
+  equipmentSpaceOptions,
+  mattressTypeOptions,
+  nightAccessRiskOptions,
+  propertyTypeOptions,
+  streetAccessTypeOptions,
+  waterSourceOptions,
+  wheelchairAccessOptions,
+  zoneTypeOptions,
+  resolveAddressEnumValue,
+  brazilUfValues,
+} from '@/data/definitions/address';
+import type { AddressEnumOption, BrazilUfValue } from '@/data/definitions/address';
+import { useRouter } from 'next/navigation';
+import { usePatientEditMode } from '@/modules/patients/components/edit-mode-context';
+import { cn } from '@/lib/utils';
 
-export function TabAddress({ patient }: { patient: FullPatientDetails }) {
-  const toast = useToast();
-  const [isSaving, setIsSaving] = useState(false);
-  const { fetchCep, loading: isFetchingCep } = useCep();
-  const [lastCepLookup, setLastCepLookup] = useState<string | null>(null);
-  const [cepError, setCepError] = useState<string | null>(null);
+const pickEnumValue = <T extends string>(
+  options: AddressEnumOption<T>[],
+  candidates: Array<string | null | undefined>,
+  fallback?: T,
+): T | undefined => {
+  for (const value of candidates) {
+    const resolved = resolveAddressEnumValue(options, value);
+    if (resolved) return resolved;
+  }
+  return fallback;
+};
 
-  const addr = (patient.address?.[0] as any) ?? {};
+const normalizeUf = (value?: string | null): BrazilUfValue | undefined => {
+  if (!value) return undefined;
+  const normalized = value.trim().toUpperCase();
+  return brazilUfValues.includes(normalized as BrazilUfValue) ? (normalized as BrazilUfValue) : undefined;
+};
+
+const resolveTenantId = (patient: FullPatientDetails): string | undefined => {
+  const candidates = [
+    (patient as any)?.tenant_id,
+    (patient.address?.[0] as any)?.tenant_id,
+    (patient.domicile?.[0] as any)?.tenant_id,
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value;
+    }
+  }
+
+  return undefined;
+};
+
+const buildAddressFormValues = (
+  patient: FullPatientDetails,
+  overrideAddress?: Record<string, any> | null,
+): PatientAddressForm => {
+  const addr = (overrideAddress ?? (patient.address?.[0] as any)) ?? {};
   const dom = (patient.domicile?.[0] as any) ?? {};
 
-  const defaultValues: PatientAddressForm = {
+  return {
     patientId: patient.id,
-    tenantId: (patient as any)?.tenant_id,
+    tenantId: resolveTenantId(patient),
     zipCode: addr.zip_code || '',
     addressLine: addr.street || '',
     number: addr.number || '',
     neighborhood: addr.neighborhood || '',
     city: addr.city || '',
-    state: addr.state || '',
+    state: normalizeUf(addr.state) ?? 'SP',
     complement: addr.complement || '',
     referencePoint: addr.reference_point || '',
-    zoneType: addr.zone_type || 'Urbana',
+    zoneType: pickEnumValue(zoneTypeOptions, [addr.zone_type], 'Urbana'),
     travelNotes: addr.travel_notes || dom.travel_notes || '',
-    geoLat: addr.geo_lat || addr.geo_latitude || undefined,
-    geoLng: addr.geo_lng || addr.geo_longitude || undefined,
+    geoLat: addr.geo_latitude || undefined,
+    geoLng: addr.geo_longitude || undefined,
     geoLatitude: addr.geo_latitude || undefined,
     geoLongitude: addr.geo_longitude || undefined,
-    propertyType: addr.property_type || undefined,
+    propertyType: pickEnumValue(propertyTypeOptions, [addr.property_type]),
     condoName: addr.condo_name || '',
     blockTower: addr.block_tower || '',
-    floorNumber: addr.floor_number || undefined,
+    floorNumber: addr.floor_number ?? undefined,
     unitNumber: addr.unit_number || '',
-    ambulanceAccess: dom.ambulance_access || 'Total',
-    wheelchairAccess: addr.wheelchair_access || 'Nao_avaliado',
-    elevatorStatus: addr.elevator_status || 'Nao_informado',
-    streetAccessType: addr.street_access_type || 'Nao_informado',
+    ambulanceAccess: pickEnumValue(ambulanceAccessOptions, [addr.ambulance_access, dom.ambulance_access], 'Total'),
+    wheelchairAccess: pickEnumValue(wheelchairAccessOptions, [addr.wheelchair_access], 'Nao_avaliado'),
+    elevatorStatus: pickEnumValue(elevatorStatusOptions, [addr.elevator_status], 'Nao_informado'),
+    streetAccessType: pickEnumValue(streetAccessTypeOptions, [addr.street_access_type], 'Nao_informado'),
     parking: addr.parking || '',
     teamParking: dom.team_parking || '',
     has24hConcierge: addr.has_24h_concierge ?? false,
     conciergeContact: addr.concierge_contact || '',
     entryProcedure: addr.entry_procedure || dom.entry_procedure || '',
-    nightAccessRisk: addr.night_access_risk || dom.night_access_risk || 'Nao_avaliado',
+    nightAccessRisk: pickEnumValue(nightAccessRiskOptions, [addr.night_access_risk, dom.night_access_risk], 'Nao_avaliado'),
     areaRiskType: addr.area_risk_type || 'Nao_avaliado',
     worksOrObstacles: addr.works_or_obstacles || '',
     hasWifi: addr.has_wifi ?? dom.has_wifi ?? false,
     hasSmokers: addr.has_smokers ?? dom.has_smokers ?? false,
-    electricInfra: addr.electric_infra || dom.electric_infra || 'Nao_informada',
-    backupPower: addr.backup_power || 'Nao_informado',
-    cellSignalQuality: addr.cell_signal_quality || 'Nao_informado',
+    electricInfra: pickEnumValue(electricInfraOptions, [addr.electric_infra, dom.electric_infra], 'Nao_informada'),
+    backupPower: pickEnumValue(backupPowerOptions, [addr.backup_power], 'Nao_informado'),
+    cellSignalQuality: pickEnumValue(cellSignalQualityOptions, [addr.cell_signal_quality], 'Nao_informado'),
     powerOutletsDesc: addr.power_outlets_desc || '',
-    equipmentSpace: addr.equipment_space || 'Nao_avaliado',
-    waterSource: addr.water_source || dom.water_source || 'Nao_informado',
+    equipmentSpace: pickEnumValue(equipmentSpaceOptions, [addr.equipment_space], 'Nao_avaliado'),
+    waterSource: pickEnumValue(waterSourceOptions, [addr.water_source, dom.water_source], 'Nao_informado'),
     adaptedBathroom: addr.adapted_bathroom ?? false,
     stayLocation: addr.stay_location || '',
-    pets: addr.pets || dom.pets_description || '',
-    notes: addr.notes || dom.general_observations || '',
-    bedType: addr.bed_type || dom.bed_type || 'Nao_informado',
-    mattressType: addr.mattress_type || dom.mattress_type || 'Nao_informado',
-    animalsBehavior: addr.animal_behavior || dom.animals_behavior || 'Nao_informado',
+    pets: addr.pets || addr.pets_description || dom.pets_description || '',
+    notes: addr.general_observations || dom.general_observations || '',
+    bedType: pickEnumValue(bedTypeOptions, [addr.bed_type, dom.bed_type], 'Nao_informado'),
+    mattressType: pickEnumValue(mattressTypeOptions, [addr.mattress_type, dom.mattress_type], 'Nao_informado'),
+    animalsBehavior: pickEnumValue(animalBehaviorOptions, [addr.animal_behavior, dom.animals_behavior], 'Nao_informado'),
     voltage: dom.voltage || '',
     backupPowerSource: dom.backup_power_source || '',
-    petsDescription: dom.pets_description || '',
-    generalObservations: dom.general_observations || '',
+    petsDescription: addr.pets_description || dom.pets_description || '',
+    generalObservations: addr.general_observations || dom.general_observations || '',
   };
+};
+
+export function TabAddress({ patient }: { patient: FullPatientDetails }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [isSaving, setIsSaving] = useState(false);
+  const { fetchCep, loading: isFetchingCep } = useCep();
+  const [cepError, setCepError] = useState<string | null>(null);
+  const [overrideAddress, setOverrideAddress] = useState<Record<string, any> | null>(null);
+  const { isEditing } = usePatientEditMode();
+
+  const defaultValues = useMemo(() => buildAddressFormValues(patient, overrideAddress), [patient, overrideAddress]);
+
+  const hasSeededAddress = useMemo(() => {
+    const street = defaultValues.addressLine?.trim();
+    const neighborhood = defaultValues.neighborhood?.trim();
+    const city = defaultValues.city?.trim();
+    return Boolean(street || neighborhood || city);
+  }, [defaultValues.addressLine, defaultValues.neighborhood, defaultValues.city]);
+
+  const seededZipDigits = useMemo(() => {
+    const digits = (defaultValues.zipCode || '').replace(/\D/g, '');
+    if (digits.length !== 8 || !hasSeededAddress) return null;
+    return digits;
+  }, [defaultValues.zipCode, hasSeededAddress]);
+
+  const [lastCepLookup, setLastCepLookup] = useState<string | null>(seededZipDigits);
 
   const form = useForm<PatientAddressForm>({
     resolver: zodResolver(PatientAddressZ) as any,
     defaultValues,
+  });
+
+  useEffect(() => {
+    form.reset(defaultValues);
+  }, [defaultValues, form]);
+
+  useEffect(() => {
+    if (!seededZipDigits) {
+      setLastCepLookup((prev) => (prev === null ? prev : null));
+      return;
+    }
+    setLastCepLookup((prev) => (prev === seededZipDigits ? prev : seededZipDigits));
+  }, [seededZipDigits]);
+
+  const handleFormSubmit = form.handleSubmit(onSubmit, (errors) => {
+    console.warn('[TabAddress] submit:invalid', errors);
+    const firstError = Object.values(errors)[0];
+    const description = typeof firstError?.message === 'string' && firstError.message.length
+      ? firstError.message
+      : 'Revise os campos destacados antes de salvar.';
+    toast('Não foi possível salvar', { description });
   });
 
   const zipValue = form.watch('zipCode');
@@ -94,7 +196,10 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
     form.setValue('addressLine', data.street || '', { shouldDirty: true });
     form.setValue('neighborhood', data.neighborhood || '', { shouldDirty: true });
     form.setValue('city', data.city || '', { shouldDirty: true });
-    form.setValue('state', data.state || '', { shouldDirty: true });
+    const normalizedState = normalizeUf(data.state);
+    if (normalizedState) {
+      form.setValue('state', normalizedState, { shouldDirty: true });
+    }
   };
 
   const handleCepLookup = async (rawCep?: string, options: { silent?: boolean } = {}) => {
@@ -132,20 +237,35 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
   async function onSubmit(data: PatientAddressForm) {
     setIsSaving(true);
     try {
+      console.log('[TabAddress] submit:start', data);
       const res = await upsertAddress(data);
+      console.log('[TabAddress] submit:response', res);
       if (res?.success === false) throw new Error(res.error);
+      if (res?.address) {
+        setOverrideAddress(res.address as Record<string, any>);
+      }
       toast("Endereço salvo", { description: "Dados de logística atualizados com sucesso." });
+      router.refresh();
     } catch (error) {
-      console.error(error);
-      toast("Erro ao salvar", { description: "Tente novamente.", action: { label: "Fechar", onClick: () => {} } });
+      console.error('[TabAddress] submit:error', error);
+      const description = error instanceof Error && error.message ? error.message : "Tente novamente.";
+      toast("Erro ao salvar", { description, action: { label: "Fechar", onClick: () => {} } });
     } finally {
+      console.log('[TabAddress] submit:done');
       setIsSaving(false);
     }
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleFormSubmit} className="space-y-6">
+        <fieldset
+          disabled={!isEditing}
+          className={cn(
+            'space-y-6',
+            !isEditing && 'opacity-80',
+          )}
+        >
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Coluna Esquerda */}
           <div className="space-y-6">
@@ -218,14 +338,24 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                   </div>
                   <div className="col-span-4">
                   <FormField control={form.control} name="zoneType" render={({ field }) => (
-                    <FormItem><FormLabel>Zona</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="Urbana">Urbana</SelectItem>
-                      <SelectItem value="Rural">Rural</SelectItem>
-                      <SelectItem value="Periurbana">Periurbana</SelectItem>
-                      <SelectItem value="Comunidade">Comunidade</SelectItem>
-                      <SelectItem value="Risco">Área de Risco</SelectItem>
-                      <SelectItem value="Nao_informada">Não informado</SelectItem>
-                    </SelectContent></Select><FormMessage /></FormItem>
+                    <FormItem>
+                      <FormLabel>Zona</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {zoneTypeOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
                   )} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -241,18 +371,26 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                 <div className="bg-slate-50 p-4 rounded-md border border-slate-200 space-y-4">
                   <h4 className="text-xs font-semibold uppercase text-slate-500">Detalhes do Imóvel</h4>
                   <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="propertyType" render={({ field }) => (
-                    <FormItem><FormLabel>Tipo</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                        <SelectItem value="Casa">Casa</SelectItem>
-                        <SelectItem value="Apartamento">Apartamento</SelectItem>
-                        <SelectItem value="Chacara_Sitio">Chácara/Sítio</SelectItem>
-                        <SelectItem value="ILPI">ILPI</SelectItem>
-                        <SelectItem value="Pensão">Pensão</SelectItem>
-                        <SelectItem value="Comercial">Comercial</SelectItem>
-                        <SelectItem value="Outro">Outro</SelectItem>
-                        <SelectItem value="Nao_informado">Não informado</SelectItem>
-                      </SelectContent></Select><FormMessage /></FormItem>
-                  )} />
+                    <FormField control={form.control} name="propertyType" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tipo</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {propertyTypeOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
                     <FormField control={form.control} name="condoName" render={({ field }) => (
                       <FormItem><FormLabel>Condomínio</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
@@ -289,29 +427,61 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
               <CardContent className="p-6 space-y-4">
                 <div className="grid grid-cols-3 gap-4">
                   <FormField control={form.control} name="ambulanceAccess" render={({ field }) => (
-                    <FormItem><FormLabel>Acesso Ambulância</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="Total">Total</SelectItem>
-                      <SelectItem value="Parcial">Parcial</SelectItem>
-                      <SelectItem value="Dificil">Difícil</SelectItem>
-                      <SelectItem value="Nao_acessa">Não acessa</SelectItem>
-                      <SelectItem value="Nao_informado">Não informado</SelectItem>
-                    </SelectContent></Select></FormItem>
+                    <FormItem>
+                      <FormLabel>Acesso Ambulância</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {ambulanceAccessOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
                   )} />
                   <FormField control={form.control} name="wheelchairAccess" render={({ field }) => (
-                    <FormItem><FormLabel>Acesso Maca/Cadeira</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="Livre">Livre</SelectItem>
-                      <SelectItem value="Com restrição">Com restrição</SelectItem>
-                      <SelectItem value="Incompatível">Incompatível</SelectItem>
-                      <SelectItem value="Nao_avaliado">Não avaliado</SelectItem>
-                    </SelectContent></Select></FormItem>
+                    <FormItem>
+                      <FormLabel>Acesso Maca/Cadeira</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {wheelchairAccessOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
                   )} />
                   <FormField control={form.control} name="nightAccessRisk" render={({ field }) => (
-                    <FormItem><FormLabel className={field.value === 'Alto' ? 'text-red-600' : ''}>Risco Noturno</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="Baixo">Baixo</SelectItem>
-                      <SelectItem value="Médio">Médio</SelectItem>
-                      <SelectItem value="Alto">Alto</SelectItem>
-                      <SelectItem value="Nao_avaliado">Não avaliado</SelectItem>
-                    </SelectContent></Select></FormItem>
+                    <FormItem>
+                      <FormLabel className={field.value === 'Alto' ? 'text-red-600' : ''}>Risco Noturno</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {nightAccessRiskOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
                   )} />
                 </div>
 
@@ -320,25 +490,45 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                     <FormItem><FormLabel>Andar</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>
                   )} />
                   <FormField control={form.control} name="elevatorStatus" render={({ field }) => (
-                    <FormItem className="col-span-2"><FormLabel>Elevador</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="Não tem">Não tem</SelectItem>
-                      <SelectItem value="Tem - Não comporta maca">Tem - Não comporta maca</SelectItem>
-                      <SelectItem value="Tem - Comporta maca">Tem - Comporta maca</SelectItem>
-                      <SelectItem value="Nao_informado">Não informado</SelectItem>
-                    </SelectContent></Select></FormItem>
+                    <FormItem className="col-span-2">
+                      <FormLabel>Elevador</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {elevatorStatusOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
                   )} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="streetAccessType" render={({ field }) => (
-                    <FormItem><FormLabel>Tipo de Rua</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="Rua Larga">Rua Larga</SelectItem>
-                      <SelectItem value="Rua Estreita">Rua Estreita</SelectItem>
-                      <SelectItem value="Rua sem Saída">Rua sem Saída</SelectItem>
-                      <SelectItem value="Viela">Viela</SelectItem>
-                      <SelectItem value="Estrada de Terra">Estrada de Terra</SelectItem>
-                      <SelectItem value="Nao_informado">Não informado</SelectItem>
-                    </SelectContent></Select></FormItem>
+                    <FormItem>
+                      <FormLabel>Tipo de Rua</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {streetAccessTypeOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
                   )} />
                   <FormField control={form.control} name="teamParking" render={({ field }) => (
                     <FormItem><FormLabel>Estacionamento Equipe</FormLabel><FormControl><Input {...field} placeholder="Ex: Na rua, fácil" /></FormControl></FormItem>
@@ -428,42 +618,83 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="electricInfra" render={({ field }) => (
-                    <FormItem><FormLabel>Voltagem</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="110v">110v</SelectItem>
-                      <SelectItem value="220v">220v</SelectItem>
-                      <SelectItem value="Bivolt">Bivolt</SelectItem>
-                      <SelectItem value="Instável">Instável</SelectItem>
-                      <SelectItem value="Nao_informada">Não informada</SelectItem>
-                    </SelectContent></Select></FormItem>
+                    <FormItem>
+                      <FormLabel>Voltagem</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {electricInfraOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
                   )} />
                   <FormField control={form.control} name="cellSignalQuality" render={({ field }) => (
-                    <FormItem><FormLabel>Sinal Celular</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="Bom">Bom</SelectItem>
-                      <SelectItem value="Razoável">Razoável</SelectItem>
-                      <SelectItem value="Ruim">Ruim</SelectItem>
-                      <SelectItem value="Inexistente">Inexistente</SelectItem>
-                      <SelectItem value="Nao_informado">Não informado</SelectItem>
-                    </SelectContent></Select></FormItem>
+                    <FormItem>
+                      <FormLabel>Sinal Celular</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {cellSignalQualityOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
                   )} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="backupPower" render={({ field }) => (
-                    <FormItem><FormLabel>Fonte Reserva</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="Nenhum">Nenhum</SelectItem>
-                      <SelectItem value="Gerador">Gerador</SelectItem>
-                      <SelectItem value="Nobreak">Nobreak</SelectItem>
-                      <SelectItem value="Rede Dupla">Rede Dupla</SelectItem>
-                      <SelectItem value="Nao_informado">Não informado</SelectItem>
-                    </SelectContent></Select></FormItem>
+                    <FormItem>
+                      <FormLabel>Fonte Reserva</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {backupPowerOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
                   )} />
                   <FormField control={form.control} name="equipmentSpace" render={({ field }) => (
-                    <FormItem><FormLabel>Espaço p/ Equip.</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="Adequado">Adequado</SelectItem>
-                      <SelectItem value="Restrito">Restrito</SelectItem>
-                      <SelectItem value="Critico">Crítico</SelectItem>
-                      <SelectItem value="Nao_avaliado">Não avaliado</SelectItem>
-                    </SelectContent></Select></FormItem>
+                    <FormItem>
+                      <FormLabel>Espaço p/ Equip.</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {equipmentSpaceOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
                   )} />
                 </div>
 
@@ -472,36 +703,64 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                     <FormItem><FormLabel>Tomadas no leito</FormLabel><FormControl><Input {...field} placeholder="Ex: 2 livres" /></FormControl></FormItem>
                   )} />
                   <FormField control={form.control} name="waterSource" render={({ field }) => (
-                    <FormItem><FormLabel>Fonte de água</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="Rede_publica">Rede pública</SelectItem>
-                      <SelectItem value="Poco_artesiano">Poço artesiano</SelectItem>
-                      <SelectItem value="Cisterna">Cisterna</SelectItem>
-                      <SelectItem value="Outro">Outro</SelectItem>
-                      <SelectItem value="Nao_informado">Não informado</SelectItem>
-                    </SelectContent></Select></FormItem>
+                    <FormItem>
+                      <FormLabel>Fonte de água</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {waterSourceOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
                   )} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="bedType" render={({ field }) => (
-                    <FormItem><FormLabel>Tipo de cama/leito</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="Hospitalar">Hospitalar</SelectItem>
-                      <SelectItem value="Articulada">Articulada</SelectItem>
-                      <SelectItem value="Comum">Comum</SelectItem>
-                      <SelectItem value="Colchao_no_chao">Colchão no chão</SelectItem>
-                      <SelectItem value="Outro">Outro</SelectItem>
-                      <SelectItem value="Nao_informado">Não informado</SelectItem>
-                    </SelectContent></Select></FormItem>
+                    <FormItem>
+                      <FormLabel>Tipo de cama/leito</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {bedTypeOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
                   )} />
                   <FormField control={form.control} name="mattressType" render={({ field }) => (
-                    <FormItem><FormLabel>Colchão</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="Pneumatico">Pneumático</SelectItem>
-                      <SelectItem value="Viscoelastico">Viscoelástico</SelectItem>
-                      <SelectItem value="Espuma_comum">Espuma comum</SelectItem>
-                      <SelectItem value="Mola">Mola</SelectItem>
-                      <SelectItem value="Outro">Outro</SelectItem>
-                      <SelectItem value="Nao_informado">Não informado</SelectItem>
-                    </SelectContent></Select></FormItem>
+                    <FormItem>
+                      <FormLabel>Colchão</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {mattressTypeOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
                   )} />
                 </div>
 
@@ -510,12 +769,23 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
                     <FormItem><FormLabel>Animais</FormLabel><FormControl><Input {...field} placeholder="Animais de estimação" /></FormControl></FormItem>
                   )} />
                   <FormField control={form.control} name="animalsBehavior" render={({ field }) => (
-                    <FormItem><FormLabel>Comportamento</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="Doces">Doces</SelectItem>
-                      <SelectItem value="Bravos">Bravos</SelectItem>
-                      <SelectItem value="Necessitam_contencao">Necessitam contenção</SelectItem>
-                      <SelectItem value="Nao_informado">Não informado</SelectItem>
-                    </SelectContent></Select></FormItem>
+                    <FormItem>
+                      <FormLabel>Comportamento</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {animalBehaviorOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
                   )} />
                 </div>
 
@@ -528,10 +798,11 @@ export function TabAddress({ patient }: { patient: FullPatientDetails }) {
         </div>
 
         <div className="flex justify-end pt-6 border-t mt-6">
-          <Button type="submit" disabled={isSaving} className="min-w-[180px]">
+          <Button type="submit" disabled={isSaving || !isEditing} className="min-w-[180px]">
             {isSaving ? "Salvando..." : (<><Save className="w-4 h-4 mr-2" />Salvar Alterações</>)}
           </Button>
         </div>
+        </fieldset>
       </form>
     </Form>
   );
